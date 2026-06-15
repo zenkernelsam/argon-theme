@@ -2,7 +2,7 @@
 						<?php
 							echo argon_get_option('argon_footer_html');
 						?>
-						<div>Theme <a href="https://github.com/solstice23/argon-theme" target="_blank"><strong>Argon</strong></a><?php if (argon_get_option('argon_hide_footer_author') != 'true') {echo " By solstice23"; }?></div>
+						<div>Theme <a href="https://github.com/solstice23/argon-theme" target="_blank"><strong>Argon</strong></a><?php if (argon_get_option('argon_hide_footer_author') != 'true') {echo " By solstice23"; } ?><?php if (argon_get_option('argon_show_fork_credit') == 'true') {echo " | <a href='https://github.com/zenkernelsam/argon-theme' target='_blank'>PHP 8.4 优化</a>"; } ?></div>
 					</footer>
 				</main>
 			</div>

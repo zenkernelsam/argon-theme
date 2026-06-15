@@ -1824,6 +1824,16 @@ window.pjaxLoaded = function(){
 							<p class="description"></p>
 						</td>
 					</tr>
+					<tr>
+						<th><label><?php _e('显示 Fork 优化标注', 'argon');?></label></th>
+						<td>
+							<select name="argon_show_fork_credit">
+								<?php $argon_show_fork_credit = get_option('argon_show_fork_credit'); ?>
+								<option value="false" <?php if ($argon_show_fork_credit=='false'){echo 'selected';} ?>>关闭</option>
+								<option value="true" <?php if ($argon_show_fork_credit=='true'){echo 'selected';} ?>>开启 | 页脚显示 "PHP 8.4 优化"</option>
+							</select>
+						</td>
+					</tr>
 				</tbody>
 			</table>
 			<p class="submit">
@@ -2174,6 +2184,7 @@ function argon_update_themeoptions(){
 		argon_update_option('argon_comment_need_captcha');
 		argon_update_option('argon_get_captcha_by_ajax');
 		argon_update_option('argon_hide_footer_author');
+		argon_update_option('argon_show_fork_credit');
 		argon_update_option('argon_card_radius');
 		argon_update_option('argon_comment_avatar_vcenter');
 		argon_update_option('argon_pjax_disabled');
