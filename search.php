@@ -8,13 +8,13 @@
 				<?php _e('的搜索结果', 'argon');?>
 			</p>
 			<?php 
-				if (get_option('argon_enable_search_filters', 'true') == 'true'){ ?>
+				if (argon_get_option('argon_enable_search_filters', 'true') == 'true'){ ?>
 					<div class="search-filters">
 						<?php
 							$all_post_types= get_post_types(array(
 								'public'   => true,
 							), 'objects');
-							$search_filters_type = explode(',', get_option('argon_search_filters_type', '*post,*page,shuoshuo'));
+							$search_filters_type = explode(',', argon_get_option('argon_search_filters_type', '*post,*page,shuoshuo'));
 							$current_filters_type = argon_get_search_post_type_array();
 							foreach ($search_filters_type as $filter_type) {
 								if ($filter_type[0] == '*'){ $filter_type = substr($filter_type, 1); }
@@ -55,7 +55,7 @@
 				if (get_post_type() == 'shuoshuo'){
 					get_template_part( 'template-parts/content-shuoshuo-preview' );
 				}else{
-					get_template_part( 'template-parts/content-preview', get_option('argon_article_list_layout', '1'));
+					get_template_part( 'template-parts/content-preview', argon_get_option('argon_article_list_layout', '1'));
 				}
 			endwhile;
 		?>

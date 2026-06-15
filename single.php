@@ -41,7 +41,7 @@
 			if ($relatedPosts != "disabled"){
 				global $post;
 				$cat_array = array();
-				if (strpos($relatedPosts, 'category') !== false){
+				if (str_contains($relatedPosts, 'category')){
 					$cats = get_the_category($post -> ID);
 					if ($cats){
 						foreach($cats as $key1 => $cat) {
@@ -50,7 +50,7 @@
 					}
 				}
 				$tag_array = array();
-				if (strpos($relatedPosts, 'tag') !== false){
+				if (str_contains($relatedPosts, 'tag')){
 					$tags = get_the_tags($post -> ID);
 					if ($tags){
 						foreach($tags as $key2 => $tag) {

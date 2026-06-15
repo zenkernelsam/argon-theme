@@ -15,6 +15,17 @@ Hexo 版本 : [github.com/solstice23/hexo-theme-argon](https://github.com/solsti
 
 > 重构初步完成，1.x 版本将冻结开发，PR 请提交到 [dev](https://github.com/solstice23/argon-theme/tree/dev) 分支。后续将逐渐重构前端代码。
 
+# Fork 优化（Qoder AI 协助完成）
+
+本 Fork 由 Qoder AI 协助完成以下优化：
+
+- **PHP 8.4 现代化** — `str_contains()` / `str_starts_with()` / `match` 表达式 / `??` 空合并等 PHP 8.0+ 语法升级
+- **性能优化** — JS 资源移至 footer、argontheme.js 通过 wp_enqueue_script 管理依赖、`argon_get_option()` 静态缓存减少数据库查询、CDN 资源预连接
+- **本地字体托管** — 不再依赖 Google Fonts CDN，字体文件本地托管（中国大陆访问更快）。后台开启 Debug 模式可切回 Google CDN
+- **安全加固** — AJAX 操作添加 nonce 验证（评论点赞、说说点赞等）
+- **兼容性修复** — PHP 8.4 隐式 nullable 类型声明显式化、所有 PHP 文件 BOM 清理、WordPress 6.7+ 兼容
+- **代码规范** — `WP_Filesystem` 替代 `file_get_contents`、`session_init()` 移入 `init` Hook、废弃 API `current_user_can('level_7')` 替换
+
 
 # 特性
 

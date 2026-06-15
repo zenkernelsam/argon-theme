@@ -44,6 +44,17 @@ function themeoptions_page(){
 			<?php wp_nonce_field("argon_update_themeoptions", "argon_update_themeoptions_nonce");?>
 			<table class="form-table">
 				<tbody>
+										<tr><th class="subtitle"><h2 style="color:#e74c3c;"><?php _e("Argon 优化", 'argon');?></h2></th></tr>
+					<tr>
+						<th><label><?php _e("兼容模式 (Debug)", 'argon');?></label></th>
+						<td>
+							<select name="argon_next_debug_mode">
+								<option value="false" <?php if (get_option('argon_next_debug_mode', 'false') == 'false') echo 'selected';?>><?php _e("关闭 (推荐)", 'argon');?></option>
+								<option value="true" <?php if (get_option('argon_next_debug_mode', 'false') == 'true') echo 'selected';?>><?php _e("开启", 'argon');?></option>
+							</select>
+							<p class="description"><?php _e("开启兼容模式将禁用所有优化特性，主题行为回退到与原版 Argon 一致，方便排查问题。", 'argon');?></p>
+						</td>
+					</tr>
 					<tr><th class="subtitle"><h2><?php _e("全局", 'argon');?></h2></th></tr>
 					<tr><th class="subtitle"><h3><?php _e("主题色", 'argon');?></h3></th></tr>
 					<tr>
@@ -2117,6 +2128,7 @@ function argon_update_themeoptions(){
 			return;
 		}
 		//配置项
+		argon_update_option('argon_next_debug_mode');
 		argon_update_option('argon_toolbar_icon');
 		argon_update_option('argon_toolbar_icon_link');
 		argon_update_option('argon_toolbar_title');

@@ -9,6 +9,17 @@ Argon - A light, simple and beautiful WordPress theme
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/solstice23/argon-theme?style=flat-square)](https://github.com/solstice23/argon-theme/commits/master) [![GitHub Release Date](https://img.shields.io/github/release-date/solstice23/argon-theme?style=flat-square)](https://github.com/solstice23/argon-theme/releases) ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/solstice23/argon-theme?style=flat-square) 
 
+# Fork Optimizations (Assisted by Qoder AI)
+
+This fork includes optimizations assisted by Qoder AI:
+
+- **PHP 8.4 Modernization** - `str_contains()` / `str_starts_with()` / `match` expressions / `??` null coalescing, etc.
+- **Performance** - JS deferred to footer, argontheme.js dependency management, `argon_get_option()` static cache, CDN preconnect
+- **Self-hosted Fonts** - No longer dependent on Google Fonts CDN (faster in Mainland China). Debug mode switches back to Google CDN
+- **Security** - AJAX nonce verification (comment upvote, essay upvote, etc.)
+- **Compatibility** - PHP 8.4 explicit nullable types, BOM cleanup, WordPress 6.7+ compatibility
+- **Code Quality** - `WP_Filesystem` replaces `file_get_contents`, `session_init()` moved to `init` hook, deprecated Level API replaced
+
 # Features
 
 + **Light and beautiful** - Using the Argon Design System, the details are exquisite.

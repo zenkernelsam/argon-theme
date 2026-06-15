@@ -1,4 +1,4 @@
-if (typeof(argonConfig) == "undefined"){
+﻿if (typeof(argonConfig) == "undefined"){
 	var argonConfig = {};
 }
 if (typeof(argonConfig.wp_path) == "undefined"){
@@ -1371,6 +1371,7 @@ $(document).on("click" , ".comment-upvote" , function(){
 		data : {
 			action: "upvote_comment",
 			comment_id : ID,
+			argon_next_nonce : (typeof argonNextNonce !== 'undefined') ? argonNextNonce.ajax_nonce : '',
 		},
 		success : function(result){
 			$this.removeClass("comment-upvoting");
@@ -1479,7 +1480,8 @@ function showCommentEditHistory(id){
 		dataType : "json",
 		data: {
 			action: "get_comment_edit_history",
-			id: id
+			id: id,
+			argon_next_nonce : (typeof argonNextNonce !== 'undefined') ? argonNextNonce.ajax_nonce : '',
 		},
 		success: function(result){
 			if ($("#comment_edit_history").data("request-id") != requestID){
@@ -2059,6 +2061,7 @@ $(document).on("click" , ".shuoshuo-upvote" , function(){
 		data : {
 			action: "upvote_shuoshuo",
 			shuoshuo_id : ID,
+			argon_next_nonce : (typeof argonNextNonce !== 'undefined') ? argonNextNonce.ajax_nonce : '',
 		},
 		success : function(result){
 			$this.removeClass("shuoshuo-upvoting");

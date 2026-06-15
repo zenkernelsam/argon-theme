@@ -1,14 +1,14 @@
 					<footer id="footer" class="site-footer card shadow-sm border-0">
 						<?php
-							echo get_option('argon_footer_html');
+							echo argon_get_option('argon_footer_html');
 						?>
-						<div>Theme <a href="https://github.com/solstice23/argon-theme" target="_blank"><strong>Argon</strong></a><?php if (get_option('argon_hide_footer_author') != 'true') {echo " By solstice23"; }?></div>
+						<div>Theme <a href="https://github.com/solstice23/argon-theme" target="_blank"><strong>Argon</strong></a><?php if (argon_get_option('argon_hide_footer_author') != 'true') {echo " By solstice23"; }?></div>
 					</footer>
 				</main>
 			</div>
 		</div>
-		<script src="<?php echo $GLOBALS['assets_path']; ?>/argontheme.js?v<?php echo $GLOBALS['theme_version']; ?>"></script>
-		<?php if (get_option('argon_math_render') == 'mathjax3') { /*Mathjax V3*/?>
+		<?php // [Argon Next] argontheme.js 已改为通过 wp_enqueue_script 在 functions.php 中管理加载 ?>
+		<?php if (argon_get_option('argon_math_render') == 'mathjax3') { /*Mathjax V3*/?>
 			<script>
 				window.MathJax = {
 					tex: {
@@ -27,9 +27,9 @@
 					}
 				};
 			</script>
-			<script src="<?php echo get_option('argon_mathjax_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js' : get_option('argon_mathjax_cdn_url'); ?>" id="MathJax-script" async></script>
+			<script src="<?php echo argon_get_option('argon_mathjax_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js' : argon_get_option('argon_mathjax_cdn_url'); ?>" id="MathJax-script" async></script>
 		<?php }?>
-		<?php if (get_option('argon_math_render') == 'mathjax2') { /*Mathjax V2*/?>
+		<?php if (argon_get_option('argon_math_render') == 'mathjax2') { /*Mathjax V2*/?>
 			<script type="text/x-mathjax-config" id="mathjax_v2_script">
 				MathJax.Hub.Config({
 					messageStyle: "none",
@@ -48,12 +48,12 @@
 					}
 				});
 			</script>
-			<script src="<?php echo get_option('argon_mathjax_v2_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/mathjax@2.7.5/MathJax.js?config=TeX-AMS_HTML' : get_option('argon_mathjax_v2_cdn_url'); ?>"></script>
+			<script src="<?php echo argon_get_option('argon_mathjax_v2_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/mathjax@2.7.5/MathJax.js?config=TeX-AMS_HTML' : argon_get_option('argon_mathjax_v2_cdn_url'); ?>"></script>
 		<?php }?>
-		<?php if (get_option('argon_math_render') == 'katex') { /*Katex*/?>
-			<link rel="stylesheet" href="<?php echo get_option('argon_katex_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/katex@0.11.1/dist/' : get_option('argon_katex_cdn_url'); ?>katex.min.css">
-			<script src="<?php echo get_option('argon_katex_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/katex@0.11.1/dist/' : get_option('argon_katex_cdn_url'); ?>katex.min.js"></script>
-			<script src="<?php echo get_option('argon_katex_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/katex@0.11.1/dist/' : get_option('argon_katex_cdn_url'); ?>contrib/auto-render.min.js"></script>
+		<?php if (argon_get_option('argon_math_render') == 'katex') { /*Katex*/?>
+			<link rel="stylesheet" href="<?php echo argon_get_option('argon_katex_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/katex@0.11.1/dist/' : argon_get_option('argon_katex_cdn_url'); ?>katex.min.css">
+			<script src="<?php echo argon_get_option('argon_katex_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/katex@0.11.1/dist/' : argon_get_option('argon_katex_cdn_url'); ?>katex.min.js"></script>
+			<script src="<?php echo argon_get_option('argon_katex_cdn_url') == '' ? '//cdn.jsdelivr.net/npm/katex@0.11.1/dist/' : argon_get_option('argon_katex_cdn_url'); ?>contrib/auto-render.min.js"></script>
 			<script>
 				document.addEventListener("DOMContentLoaded", function() {
 					renderMathInElement(document.body,{
@@ -67,18 +67,18 @@
 			</script>
 		<?php }?>
 
-		<?php if (get_option('argon_enable_code_highlight') == 'true') { /*Highlight.js*/?>
-			<link rel="stylesheet" href="<?php echo $GLOBALS['assets_path']; ?>/assets/vendor/highlight/styles/<?php echo get_option('argon_code_theme') == '' ? 'vs2015' : get_option('argon_code_theme'); ?>.css">
+		<?php if (argon_get_option('argon_enable_code_highlight') == 'true') { /*Highlight.js*/?>
+			<link rel="stylesheet" href="<?php echo $GLOBALS['assets_path']; ?>/assets/vendor/highlight/styles/<?php echo argon_get_option('argon_code_theme') == '' ? 'vs2015' : argon_get_option('argon_code_theme'); ?>.css">
 		<?php }?>
 
 	</div>
 </div>
 <?php 
-	wp_enqueue_script("argonjs", $GLOBALS['assets_path'] . "/assets/js/argon.min.js", null, $GLOBALS['theme_version'], true);
+// [Argon Next] 移除重复加载，argon.min.js 已在 header 中通过 footer 加载注册
 ?>
 <?php wp_footer(); ?>
 </body>
 
-<?php echo get_option('argon_custom_html_foot'); ?>
+<?php echo argon_get_option('argon_custom_html_foot'); ?>
 
 </html>
