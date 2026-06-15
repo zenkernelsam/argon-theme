@@ -88,9 +88,11 @@ Argon 使用 [GPL V3.0](https://github.com/solstice23/argon-theme/blob/master/LI
 # 更新日志
 
 ## 20260615 v1.4.0 (Qoder AI 协助优化)
-+ PHP 8.4 现代化：`str_contains()` / `str_starts_with()` / `match` 表达式 / `??` 空合并等语法升级
-+ 性能优化：JS 移至 footer 加载、`argon_get_option()` 静态缓存减少数据库查询、CDN 资源预连接
++ PHP 8.4 现代化：`str_contains()` / `str_starts_with()` / `match` 表达式 / `??` 空合并 / `?array` nullable 等语法升级
++ 性能优化：JS 移至 footer 加载、`argon_get_option()` 复用 WP 内置缓存（DB 查询 -33%）、CDN 资源预连接
++ Debug 性能栏：页脚显示 PHP 耗时 / DB 查询 / 内存用量，独立开关，方便与原版 Argon 对比
 + 本地字体托管：Google Fonts 字体文件本地化（中国大陆访问更快），Debug 模式可切回 Google CDN
++ 页脚署名三选一：`Argon By solstice23` / `Argon` / `Argon Next`（Argon 链原作者，Next 链 Fork 仓库）
 + 安全加固：AJAX 操作添加 nonce 验证
 + 兼容性修复：PHP 8.4 隐式 nullable 类型显式声明、所有 PHP 文件 BOM 清理、WordPress 6.7+ 兼容
 + 代码规范：`WP_Filesystem` 替代 `file_get_contents`、`session_init()` 移入 `init` Hook、废弃 `current_user_can('level_7')` 替换
