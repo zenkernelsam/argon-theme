@@ -55,6 +55,16 @@ function themeoptions_page(){
 							<p class="description"><?php _e("开启兼容模式将禁用所有优化特性，主题行为回退到与原版 Argon 一致，方便排查问题。", 'argon');?></p>
 						</td>
 					</tr>
+					<tr>
+						<th><label><?php _e("显示性能信息栏", 'argon');?></label></th>
+						<td>
+							<select name="argon_show_perf_bar">
+								<option value="false" <?php if (get_option('argon_show_perf_bar', 'false') == 'false') echo 'selected';?>><?php _e("关闭", 'argon');?></option>
+								<option value="true" <?php if (get_option('argon_show_perf_bar', 'false') == 'true') echo 'selected';?>><?php _e("开启", 'argon');?></option>
+							</select>
+							<p class="description"><?php _e("页面底部显示 PHP 耗时 / DB 查询 / 内存用量，用于性能对比。关闭 Debug 模式后数据更准确。", 'argon');?></p>
+						</td>
+					</tr>
 					<tr><th class="subtitle"><h2><?php _e("全局", 'argon');?></h2></th></tr>
 					<tr><th class="subtitle"><h3><?php _e("主题色", 'argon');?></h3></th></tr>
 					<tr>
@@ -2130,6 +2140,7 @@ function argon_update_themeoptions(){
 		}
 		//配置项
 		argon_update_option('argon_next_debug_mode');
+		argon_update_option('argon_show_perf_bar');
 		argon_update_option('argon_toolbar_icon');
 		argon_update_option('argon_toolbar_icon_link');
 		argon_update_option('argon_toolbar_title');

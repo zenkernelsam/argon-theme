@@ -3234,9 +3234,9 @@ if (get_option('argon_enable_login_css') == 'true'){
 	add_action('login_head', 'argon_login_page_style');
 }
 
-// ========== [Argon] Debug 性能栏 ==========
+// ========== [Argon] 性能栏 ==========
 function argon_perf_footer() {
-	if (!is_admin() && argon_next_is_debug_mode()) {
+	if (!is_admin() && get_option('argon_show_perf_bar', 'false') == 'true') {
 		$time = round((microtime(true) - $GLOBALS['argon_perf_start']) * 1000, 1);
 		$queries = get_num_queries();
 		$memory = round(memory_get_peak_usage() / 1024 / 1024, 1);
@@ -3246,7 +3246,7 @@ function argon_perf_footer() {
 		echo "<span>DB: <b style='color:#81c784'>{$queries}</b> 次查询</span>";
 		echo "<span>内存: <b style='color:#ffb74d'>{$memory}MB</b></span>";
 		echo "<span>主题: <b style='color:#ce93d8'>{$theme->Name} v{$theme->Version}</b></span>";
-		echo "<span style='margin-left:auto;color:#888'>Debug 模式 — 切换到原版 Argon 主题对比性能</span>";
+		echo "<span style='margin-left:auto;color:#888'>关闭 Debug 以启用全部优化，切换原版 Argon 主题对比性能</span>";
 		echo '</div>';
 	}
 }
