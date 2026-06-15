@@ -50,23 +50,15 @@ function argon_next_enqueue_theme_js() {
 }
 add_action('wp_enqueue_scripts', 'argon_next_enqueue_theme_js');
 
-// [Argon] Option 缓存层：减少数据库查询次数
+// [Argon] Option 缓存层：减少重复 get_option 调用
 function argon_get_option($key, $default = '') {
-	global $wpdb;
 	static $cache = array();
-	if (isset($cache[$key])) {
+	if (array_key_exists($key, $cache)) {
 		return $cache[$key];
 	}
-	$value = $wpdb->get_var($wpdb->prepare(
-		"SELECT option_value FROM $wpdb->options WHERE option_name = %s",
-		$key
-	));
-	if ($value === null) {
-		return $default;
-	}
-	$unserialized = maybe_unserialize($value);
-	$cache[$key] = $unserialized;
-	return $unserialized;
+	$value = get_option($key, $default);
+	$cache[$key] = $value;
+	return $value;
 }
 
 
