@@ -104,6 +104,7 @@ Argon 使用 [GPL V3.0](https://github.com/solstice23/argon-theme/blob/master/LI
 + 后台 Quick Edit 编辑阅读量：文章列表新增"浏览量"列，快速编辑中可直接修改阅读量数值
 + WP 6.7+ 兼容：翻译加载从 `after_setup_theme` 迁移至 `init` 钩子，移除全局作用域翻译调用
 + Gutenberg CSS 容错：`filemtime()` 调用前增加 `file_exists()` 判断
++ 打包修复：zip 内新增 `argon-next/` 父目录，解决 WordPress 上传时自动加 `-1` 后缀的问题
 + 新增 `pack.ps1` 一键打包脚本（PowerShell），自动排除开发文件
 
 ## 20260615 v1.4.0 (Qoder AI 协助优化)

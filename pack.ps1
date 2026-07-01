@@ -33,7 +33,7 @@ Get-ChildItem -Path $source -Recurse -File | ForEach-Object {
         if ($name -eq $e) { return }
         if ($full -like "*\$e\*" -or $full -like "*\$e") { return }
     }
-    $entry = $full.Substring($sourceLen).Replace('\', '/')
+    $entry = 'argon-next/' + $full.Substring($sourceLen).Replace('\', '/')
     [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $full, $entry)
     $count++
 }
