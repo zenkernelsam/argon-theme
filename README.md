@@ -25,6 +25,9 @@ Hexo 版本 : [github.com/solstice23/hexo-theme-argon](https://github.com/solsti
 - **安全加固** — AJAX 操作添加 nonce 验证（评论点赞、说说点赞等）
 - **兼容性修复** — PHP 8.4 隐式 nullable 类型声明显式化、所有 PHP 文件 BOM 清理、WordPress 6.7+ 兼容
 - **代码规范** — `WP_Filesystem` 替代 `file_get_contents`、`session_init()` 移入 `init` Hook、废弃 API `current_user_can('level_7')` 替换
+- **阅读量修复** — 修复原版 PHP 宽松比较 `$count==''` 导致浏览记录被清零的 Bug，改用严格比较 `===`
+- **后台 Quick Edit 编辑阅读量** — 文章列表新增"浏览量"列，快速编辑中可直接修改阅读量数值
+- **WP 6.7 兼容** — 翻译加载时机适配、全局作用域翻译调用清理
 
 
 # 特性
@@ -46,6 +49,15 @@ Hexo 版本 : [github.com/solstice23/hexo-theme-argon](https://github.com/solsti
 # 安装
 
 在 [Release](https://github.com/solstice23/argon-theme/releases) 页面下载 .zip 文件，在 WordPress 后台 "主题" 页面上传并安装。
+
+## Fork 版本打包
+
+```powershell
+# 在项目根目录执行，脚本自动排除自身和 .git 等开发文件
+powershell -ExecutionPolicy Bypass -File ".\pack.ps1"
+```
+
+输出 `argon-next.zip`，可直接上传 WordPress。
 
 # 文档
 
@@ -86,6 +98,13 @@ Argon 使用 [GPL V3.0](https://github.com/solstice23/argon-theme/blob/master/LI
 自动推送更新消息以及其他关于 Argon 的消息
 
 # 更新日志
+
+## 20260701 v1.4.1
++ 阅读量修复：修复 PHP 宽松比较 `$count==''` 导致浏览记录被清零的严重 Bug，改用严格比较 `===`
++ 后台 Quick Edit 编辑阅读量：文章列表新增"浏览量"列，快速编辑中可直接修改阅读量数值
++ WP 6.7+ 兼容：翻译加载从 `after_setup_theme` 迁移至 `init` 钩子，移除全局作用域翻译调用
++ Gutenberg CSS 容错：`filemtime()` 调用前增加 `file_exists()` 判断
++ 新增 `pack.ps1` 一键打包脚本（PowerShell），自动排除开发文件
 
 ## 20260615 v1.4.0 (Qoder AI 协助优化)
 + PHP 8.4 现代化：`str_contains()` / `str_starts_with()` / `match` 表达式 / `??` 空合并 / `?array` nullable 等语法升级

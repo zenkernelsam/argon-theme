@@ -14,7 +14,7 @@ function argon_next_is_debug_mode() {
 	return get_option('argon_next_debug_mode', 'false') === 'true';
 }
 if (version_compare( $GLOBALS['wp_version'], '4.4-alpha', '<' )) {
-	echo "<div style='background: #5e72e4;color: #fff;font-size: 30px;padding: 50px 30px;position: fixed;width: 100%;left: 0;right: 0;bottom: 0;z-index: 2147483647;'>" . __("Argon 主题不支持 Wordpress 4.4 以下版本，请更新 Wordpress", 'argon') . "</div>";
+	echo "<div style='background: #5e72e4;color: #fff;font-size: 30px;padding: 50px 30px;position: fixed;width: 100%;left: 0;right: 0;bottom: 0;z-index: 2147483647;'>Argon 主题不支持 WordPress 4.4 以下版本，请更新 WordPress</div>";
 }
 function theme_slug_setup() {
 	add_theme_support('title-tag');
@@ -23,9 +23,13 @@ function theme_slug_setup() {
 	add_theme_support('custom-logo');
 	add_theme_support('responsive-embeds');
 	add_theme_support('wp-block-styles');
-	load_theme_textdomain('argon', get_template_directory() . '/languages');
 }
 add_action('after_setup_theme','theme_slug_setup');
+// [Argon] WP 6.7+ 要求翻译在 init 之后加载
+function argon_load_textdomain() {
+	load_theme_textdomain('argon', get_template_directory() . '/languages');
+}
+add_action('init', 'argon_load_textdomain');
 // [Argon] 优化资源预连接，加速 CDN 资源加载
 function argon_next_resource_hints($urls, $relation_type) {
 	if ($relation_type === 'dns-prefetch') {
@@ -498,9 +502,7 @@ function get_og_image(){
 function get_post_views($post_id){
 	$count_key = 'views';
 	$count = get_post_meta($post_id, $count_key, true);
-	if ($count==''){
-		delete_post_meta($post_id, $count_key);
-		add_post_meta($post_id, $count_key, '0');
+	if ($count === '' || $count === false || $count === null || $count === '0'){
 		$count = '0';
 	}
 	return number_format_i18n($count);
@@ -538,11 +540,10 @@ function set_post_views(){
 	$count_key = 'views';
 	$count = get_post_meta($post_id, $count_key, true);
 	if (is_single() || is_page()) {
-		if ($count==''){
-			delete_post_meta($post_id, $count_key);
-			add_post_meta($post_id, $count_key, '0');
+		if ($count === '' || $count === false || $count === null || $count === '0'){
+			update_post_meta($post_id, $count_key, '1');
 		} else {
-			update_post_meta($post_id, $count_key, $count + 1);
+			update_post_meta($post_id, $count_key, intval($count) + 1);
 		}
 	}
 }
@@ -2426,11 +2427,13 @@ function argon_init_gutenberg_blocks() {
 		null,
 		true
 	);
+	$gutenberg_css_file = get_template_directory() . '/gutenberg/dist/blocks.editor.build.css';
+	$gutenberg_css_ver = file_exists($gutenberg_css_file) ? filemtime($gutenberg_css_file) : $GLOBALS['theme_version'];
 	wp_register_style(
 		'argon-gutenberg-block-backend-css',
 		$GLOBALS['assets_path'].'/gutenberg/dist/blocks.editor.build.css',
 		array('wp-edit-blocks'),
-		filemtime(get_template_directory() . '/gutenberg/dist/blocks.editor.build.css')
+		$gutenberg_css_ver
 	);
 	register_block_type(
 		'argon/argon-gutenberg-block', array(
@@ -3243,3 +3246,80 @@ function argon_perf_footer() {
 	}
 }
 add_action('wp_footer', 'argon_perf_footer', 999);
+
+// ========== 文章列表 Quick Edit 浏览量编辑 ==========
+// 添加"浏览量"列
+function argon_add_views_column($columns) {
+	$columns['post_views'] = __('浏览量', 'argon');
+	return $columns;
+}
+add_filter('manage_posts_columns', 'argon_add_views_column');
+add_filter('manage_pages_columns', 'argon_add_views_column');
+
+// 显示浏览量列的内容
+function argon_display_views_column($column_name, $post_id) {
+	if ($column_name == 'post_views') {
+		$views = get_post_meta($post_id, 'views', true);
+		echo ($views === '' ? '0' : number_format_i18n($views));
+	}
+}
+add_action('manage_posts_custom_column', 'argon_display_views_column', 10, 2);
+add_action('manage_pages_custom_column', 'argon_display_views_column', 10, 2);
+
+// Quick Edit 表单中添加浏览量输入框
+function argon_quick_edit_views_field($column_name, $post_type) {
+	if ($column_name != 'post_views') {
+		return;
+	}
+	?>
+	<fieldset class="inline-edit-col-right">
+		<div class="inline-edit-col">
+			<label class="alignleft">
+				<span class="title"><?php _e('浏览量', 'argon'); ?></span>
+				<span class="input-text-wrap">
+					<input type="number" name="post_views" class="post_views" value="" min="0" step="1" style="width:100px;">
+				</span>
+			</label>
+		</div>
+	</fieldset>
+	<?php
+}
+add_action('quick_edit_custom_box', 'argon_quick_edit_views_field', 10, 2);
+
+// 通过 JS 把当前浏览量填入 Quick Edit 表单
+function argon_quick_edit_views_js() {
+	$screen = get_current_screen();
+	if ($screen && $screen->base == 'edit') {
+		?>
+		<script>
+		jQuery(function($) {
+			var $wpInlineEdit = inlineEditPost.edit;
+			inlineEditPost.edit = function(id) {
+				$wpInlineEdit.apply(this, arguments);
+				var postId = (typeof id === 'object') ? this.getId(id) : id;
+				if (postId) {
+					var viewsValue = $('#post-' + postId + ' td.column-post_views').text().replace(/,/g, '');
+					$('#edit-' + postId + ' input[name="post_views"]').val(viewsValue);
+				}
+			};
+		});
+		</script>
+		<?php
+	}
+}
+add_action('admin_footer', 'argon_quick_edit_views_js');
+
+// 保存 Quick Edit 提交的浏览量
+function argon_save_quick_edit_views($post_id) {
+	if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+		return;
+	}
+	if (!current_user_can('edit_post', $post_id)) {
+		return;
+	}
+	if (isset($_POST['post_views']) && $_POST['post_views'] !== '') {
+		$views = absint($_POST['post_views']);
+		update_post_meta($post_id, 'views', $views);
+	}
+}
+add_action('save_post', 'argon_save_quick_edit_views');
