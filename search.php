@@ -17,6 +17,9 @@
 							$search_filters_type = explode(',', argon_get_option('argon_search_filters_type', '*post,*page,shuoshuo'));
 							$current_filters_type = argon_get_search_post_type_array();
 							foreach ($search_filters_type as $filter_type) {
+								if ($filter_type === ''){
+									continue;
+								}
 								if ($filter_type[0] == '*'){ $filter_type = substr($filter_type, 1); }
 								$checked = in_array($filter_type, $current_filters_type);
 								if (isset($all_post_types[$filter_type])){

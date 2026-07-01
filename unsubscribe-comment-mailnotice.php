@@ -1,8 +1,8 @@
 <?php
 	require(preg_replace('/wp-content(.*?)$/', '', dirname( __FILE__ )) . 'wp-blog-header.php');
 	header('HTTP/1.1 200 OK');
-	$id = intval($_GET['comment'] ?? -1);
-	$token = $_GET['token'] ?? "";
+	$id = isset($_GET['comment']) ? absint(wp_unslash($_GET['comment'])) : -1;
+	$token = isset($_GET['token']) ? sanitize_text_field(wp_unslash($_GET['token'])) : "";
 	if ($id == -1) {
 		$page_title = __('参数错误', 'argon');
 		$title = "<i class='fa fa-close' style='color: #f5365c;margin-right: 12px;'></i>" . __("错误", 'argon');
@@ -34,12 +34,12 @@
 <head>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet">
-	<link href="<?php bloginfo('template_url'); ?>/assets/vendor/nucleo/css/nucleo.css" rel="stylesheet">
-	<link href="<?php bloginfo('template_url'); ?>/assets/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-	<link type="text/css" href="<?php bloginfo('template_url'); ?>/assets/css/argon.min.css" rel="stylesheet">
-	<script src="<?php bloginfo('template_url'); ?>/assets/vendor/jquery/jquery.min.js"></script>
-	<script src="<?php bloginfo('template_url'); ?>/assets/vendor/bootstrap/bootstrap.min.js"></script>
-	<script src="<?php bloginfo('template_url'); ?>/assets/js/argon.min.js"></script>
+	<link href="<?php echo esc_url(get_template_directory_uri()); ?>/assets/vendor/nucleo/css/nucleo.css" rel="stylesheet">
+	<link href="<?php echo esc_url(get_template_directory_uri()); ?>/assets/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+	<link type="text/css" href="<?php echo esc_url(get_template_directory_uri()); ?>/assets/css/argon.min.css" rel="stylesheet">
+	<script src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/vendor/jquery/jquery.min.js"></script>
+	<script src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/vendor/bootstrap/bootstrap.min.js"></script>
+	<script src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/js/argon.min.js"></script>
 	<title><?php echo $page_title; ?></title>
 </head>
 <body>

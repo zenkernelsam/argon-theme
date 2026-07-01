@@ -41,7 +41,7 @@
 	}
 	$htmlclasses .= argon_get_option('argon_article_header_style', 'article-header-style-default') . ' ';
 	// [PHP 8.0+] 使用 str_contains 替代 strpos
-	$ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+	$ua = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) : '';
 	if(str_contains($ua, 'Safari') && !str_contains($ua, 'Chrome')){
 		$htmlclasses .= ' using-safari';
 	}
@@ -50,9 +50,10 @@
 <?php
 	$themecolor = get_option("argon_theme_color", "#5e72e4");
 	$themecolor_origin = $themecolor;
-	if (($_COOKIE['argon_custom_theme_color'] ?? null) !== null){
-		if (checkHEX($_COOKIE["argon_custom_theme_color"]) && argon_get_option('argon_show_customize_theme_color_picker') != 'false'){
-			$themecolor = $_COOKIE["argon_custom_theme_color"];
+	$custom_theme_color = isset($_COOKIE['argon_custom_theme_color']) ? sanitize_text_field(wp_unslash($_COOKIE['argon_custom_theme_color'])) : '';
+	if ($custom_theme_color !== ''){
+		if (checkHEX($custom_theme_color) && argon_get_option('argon_show_customize_theme_color_picker') != 'false'){
+			$themecolor = $custom_theme_color;
 		}
 	}
 	if (hex2gray($themecolor) < 50){
@@ -65,8 +66,9 @@
 		$cardradius = "4";
 	}
 	$cardradius_origin = $cardradius;
-	if (($_COOKIE['argon_card_radius'] ?? '') !== ''){
-		$cardradius = $_COOKIE["argon_card_radius"];
+	$custom_card_radius = isset($_COOKIE['argon_card_radius']) ? sanitize_text_field(wp_unslash($_COOKIE['argon_card_radius'])) : '';
+	if ($custom_card_radius !== ''){
+		$cardradius = $custom_card_radius;
 	}
 ?>
 <head>

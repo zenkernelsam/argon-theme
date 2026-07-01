@@ -2,10 +2,10 @@
 function themeoptions_page(){
 	/*主题选项*/
 ?>
-<script src="<?php bloginfo('template_url'); ?>/assets/vendor/jquery/jquery.min.js"></script>
-	<script src="<?php bloginfo('template_url'); ?>/assets/vendor/headindex/headindex.js"></script>
+<script src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/vendor/jquery/jquery.min.js"></script>
+	<script src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/vendor/headindex/headindex.js"></script>
 	<script>!function(n){"function"==typeof define&&define.amd?define(["jquery"],function(e){return n(e)}):"object"==typeof module&&"object"==typeof module.exports?module.exports=n(require("jquery")):n(jQuery)}(function(n){function e(n){var e=7.5625,t=2.75;return n<1/t?e*n*n:n<2/t?e*(n-=1.5/t)*n+.75:n<2.5/t?e*(n-=2.25/t)*n+.9375:e*(n-=2.625/t)*n+.984375}void 0!==n.easing&&(n.easing.jswing=n.easing.swing);var t=Math.pow,u=Math.sqrt,r=Math.sin,i=Math.cos,a=Math.PI,o=1.70158,c=1.525*o,s=2*a/3,f=2*a/4.5;return n.extend(n.easing,{def:"easeOutQuad",swing:function(e){return n.easing[n.easing.def](e)},easeInQuad:function(n){return n*n},easeOutQuad:function(n){return 1-(1-n)*(1-n)},easeInOutQuad:function(n){return n<.5?2*n*n:1-t(-2*n+2,2)/2},easeInCubic:function(n){return n*n*n},easeOutCubic:function(n){return 1-t(1-n,3)},easeInOutCubic:function(n){return n<.5?4*n*n*n:1-t(-2*n+2,3)/2},easeInQuart:function(n){return n*n*n*n},easeOutQuart:function(n){return 1-t(1-n,4)},easeInOutQuart:function(n){return n<.5?8*n*n*n*n:1-t(-2*n+2,4)/2},easeInQuint:function(n){return n*n*n*n*n},easeOutQuint:function(n){return 1-t(1-n,5)},easeInOutQuint:function(n){return n<.5?16*n*n*n*n*n:1-t(-2*n+2,5)/2},easeInSine:function(n){return 1-i(n*a/2)},easeOutSine:function(n){return r(n*a/2)},easeInOutSine:function(n){return-(i(a*n)-1)/2},easeInExpo:function(n){return 0===n?0:t(2,10*n-10)},easeOutExpo:function(n){return 1===n?1:1-t(2,-10*n)},easeInOutExpo:function(n){return 0===n?0:1===n?1:n<.5?t(2,20*n-10)/2:(2-t(2,-20*n+10))/2},easeInCirc:function(n){return 1-u(1-t(n,2))},easeOutCirc:function(n){return u(1-t(n-1,2))},easeInOutCirc:function(n){return n<.5?(1-u(1-t(2*n,2)))/2:(u(1-t(-2*n+2,2))+1)/2},easeInElastic:function(n){return 0===n?0:1===n?1:-t(2,10*n-10)*r((10*n-10.75)*s)},easeOutElastic:function(n){return 0===n?0:1===n?1:t(2,-10*n)*r((10*n-.75)*s)+1},easeInOutElastic:function(n){return 0===n?0:1===n?1:n<.5?-t(2,20*n-10)*r((20*n-11.125)*f)/2:t(2,-20*n+10)*r((20*n-11.125)*f)/2+1},easeInBack:function(n){return 2.70158*n*n*n-o*n*n},easeOutBack:function(n){return 1+2.70158*t(n-1,3)+o*t(n-1,2)},easeInOutBack:function(n){return n<.5?t(2*n,2)*(7.189819*n-c)/2:(t(2*n-2,2)*((c+1)*(2*n-2)+c)+2)/2},easeInBounce:function(n){return 1-e(1-n)},easeOutBounce:e,easeInOutBounce:function(n){return n<.5?(1-e(1-2*n))/2:(1+e(2*n-1))/2}}),n});</script>
-	<script src="<?php bloginfo('template_url'); ?>/assets/vendor/dragula/dragula.min.js"></script>
+	<script src="<?php echo esc_url(get_template_directory_uri()); ?>/assets/vendor/dragula/dragula.min.js"></script>
 	<div>
 		<style type="text/css">
 			h2{
@@ -1139,7 +1139,7 @@ function themeoptions_page(){
 								<option value="11" <?php if ($argon_lazyload_loading_style=='11'){echo 'selected';} ?>><?php _e('加载动画', 'argon');?> 11</option>
 								<option value="none" <?php if ($argon_lazyload_loading_style=='none'){echo 'selected';} ?>><?php _e('不使用', 'argon');?></option>
 							</select>
-							<p class="description"><?php _e('在图片被加载之前显示的加载效果', 'argon');?> , <a target="_blank" href="<?php bloginfo('template_url'); ?>/assets/vendor/svg-loaders"><?php _e('预览所有效果', 'argon');?></a></p>
+							<p class="description"><?php _e('在图片被加载之前显示的加载效果', 'argon');?> , <a target="_blank" href="<?php echo esc_url(get_template_directory_uri()); ?>/assets/vendor/svg-loaders"><?php _e('预览所有效果', 'argon');?></a></p>
 						</td>
 					</tr>
 					<tr><th class="subtitle"><h2><?php _e('图片放大浏览', 'argon');?></h2></th></tr>
@@ -2114,13 +2114,19 @@ window.pjaxLoaded = function(){
 }
 add_action('admin_menu', 'themeoptions_admin_menu');
 function argon_update_option($name){
-	update_option($name, htmlspecialchars(stripslashes($_POST[$name])));
+	$value = isset($_POST[$name]) ? wp_unslash($_POST[$name]) : '';
+	update_option($name, htmlspecialchars($value, ENT_QUOTES, get_bloginfo('charset')));
 }
 function argon_update_option_allow_tags($name){
-	update_option($name, stripslashes($_POST[$name]));
+	$value = isset($_POST[$name]) ? wp_unslash($_POST[$name]) : '';
+	if (!current_user_can('unfiltered_html')){
+		$value = wp_kses_post($value);
+	}
+	update_option($name, $value);
 }
 function argon_update_option_checkbox($name){
-	if (isset($_POST[$name]) && $_POST[$name] == 'true'){
+	$value = isset($_POST[$name]) ? sanitize_text_field(wp_unslash($_POST[$name])) : '';
+	if ($value == 'true'){
 		update_option($name, 'true');
 	}else{
 		update_option($name, 'false');
@@ -2130,11 +2136,14 @@ function argon_update_themeoptions(){
 	if (!isset($_POST['update_themeoptions'])){
 		return;
 	}
-	if ($_POST['update_themeoptions'] == 'true'){
+	if (sanitize_text_field(wp_unslash($_POST['update_themeoptions'])) == 'true'){
+		if (!current_user_can('edit_theme_options')){
+			return;
+		}
 		if (!isset($_POST['argon_update_themeoptions_nonce'])){
 			return;
 		}
-		$nonce = $_POST['argon_update_themeoptions_nonce'];
+		$nonce = sanitize_text_field(wp_unslash($_POST['argon_update_themeoptions_nonce']));
 		if (!wp_verify_nonce($nonce, 'argon_update_themeoptions')){
 			return;
 		}

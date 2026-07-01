@@ -2,7 +2,11 @@
 /*
 Template Name: 说说
 */
-query_posts("post_type=shuoshuo&post_status=publish&posts_per_page=-1");
+$argon_shuoshuo_query = new WP_Query(array(
+	'post_type' => 'shuoshuo',
+	'post_status' => 'publish',
+	'posts_per_page' => -1,
+));
 ?>
 
 <?php get_header(); ?>
@@ -28,12 +32,13 @@ query_posts("post_type=shuoshuo&post_status=publish&posts_per_page=-1");
 
 <div id="primary" class="content-area">
 	<main id="main" class="site-main" role="main">
-	<?php if ( have_posts() ) : ?>
+	<?php if ( $argon_shuoshuo_query -> have_posts() ) : ?>
 		<?php
-			while ( have_posts() ) :
-				the_post();
+			while ( $argon_shuoshuo_query -> have_posts() ) :
+				$argon_shuoshuo_query -> the_post();
 				get_template_part( 'template-parts/content', 'shuoshuo' );
 			endwhile;
+			wp_reset_postdata();
 		?>
 		<?php
 			echo get_argon_formatted_paginate_links_for_all_platforms();

@@ -99,6 +99,16 @@ Argon 使用 [GPL V3.0](https://github.com/solstice23/argon-theme/blob/master/LI
 
 # 更新日志
 
+## 20260701 v1.4.2
++ PHP 8.4 / WordPress 7.0 兼容优化：收紧 `$_POST` / `$_GET` / `$_COOKIE` / `$_SERVER` 输入处理，补充 `wp_unslash()`、sanitize 与异常数据判空
++ 文章 Meta 保存加固：保存字段白名单化，HTML/CSS 字段要求 `unfiltered_html` 权限，AJAX 保存保持原有 `status` 返回结构
++ 阅读量功能优化：浏览量递增改为数据库原子更新，Quick Edit 读取原始数值，避免本地化数字导致保存错误
++ 评论相关 AJAX 加固：评论编辑、置顶、点赞等路径补充 nonce 校验和异常评论 ID 容错
++ GitHub Shortcode 容错：兼容 PHP 8 错误处理签名，远程 API 异常或 JSON 字段缺失时回退到前端渲染
++ 主题设置保存加固：补充 `edit_theme_options` 权限检查，设置字段保存时增加默认值、反斜杠处理和 HTML 权限过滤
++ WordPress API 更新：替换旧式 `template_url`、`query_posts()`、`wp_reset_query()` 等调用，减少全局查询污染
++ 其他稳定性修复：分页、缩略图、Bing 背景、友链/时间线短代码等路径补充异常数据判空
+
 ## 20260701 v1.4.1
 + 阅读量修复：修复 PHP 宽松比较 `$count==''` 导致浏览记录被清零的严重 Bug，改用严格比较 `===`
 + 后台 Quick Edit 编辑阅读量：文章列表新增"浏览量"列，快速编辑中可直接修改阅读量数值

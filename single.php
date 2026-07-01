@@ -100,7 +100,7 @@
 						echo '</a>';
 					}
 					echo '</div></div>';
-					wp_reset_query();
+					wp_reset_postdata();
 				}
 			}
 

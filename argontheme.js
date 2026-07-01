@@ -862,7 +862,8 @@ if (argonConfig.waterflow_columns != "1") {
 				data: {
 					action: "pin_comment",
 					id: commentID,
-					pinned: pinned ? "false" : "true"
+					pinned: pinned ? "false" : "true",
+					argon_next_nonce : (typeof argonNextNonce !== 'undefined') ? argonNextNonce.ajax_nonce : '',
 				},
 				success: function(result){
 					$("#comment_pin_comfirm_dialog").modal('hide');
@@ -1263,7 +1264,8 @@ if (argonConfig.waterflow_columns != "1") {
 			data: {
 				action: "user_edit_comment",
 				comment: commentContent,
-				id: editID
+				id: editID,
+				argon_next_nonce : (typeof argonNextNonce !== 'undefined') ? argonNextNonce.ajax_nonce : '',
 			},
 			success: function(result){
 				$("#post_comment_content").removeAttr("disabled");

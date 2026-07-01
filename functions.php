@@ -42,11 +42,11 @@ add_filter('wp_resource_hints', 'argon_next_resource_hints', 10, 2);
 
 // [Argon] 生成 AJAX nonce 并传递给前端
 function argon_next_enqueue_ajax_nonce() {
-	wp_localize_script('argonjs', 'argonNextNonce', array(
+	wp_localize_script('argontheme', 'argonNextNonce', array(
 		'ajax_nonce' => wp_create_nonce('argon_next_ajax_nonce'),
 	));
 }
-add_action('wp_enqueue_scripts', 'argon_next_enqueue_ajax_nonce');
+add_action('wp_enqueue_scripts', 'argon_next_enqueue_ajax_nonce', 20);
 
 // [Argon] 加载 argontheme.js，通过 wp_enqueue 确保 jQuery 依赖在前
 function argon_next_enqueue_theme_js() {
@@ -78,7 +78,7 @@ $GLOBALS['assets_path'] = match (get_option("argon_assets_path")) {
 	"jsdelivr_fastly"=> "https://fastly.jsdelivr.net/gh/solstice23/argon-theme@" . $argon_version,
 	"jsdelivr_cf"    => "https://testingcf.jsdelivr.net/gh/solstice23/argon-theme@" . $argon_version,
 	"custom"         => preg_replace('/%theme_version%/', $argon_version, preg_replace('/\/$/', '', get_option("argon_custom_assets_path"))),
-	default            => get_bloginfo('template_url'),
+	default            => get_template_directory_uri(),
 };
 
 //翻译 Hook
@@ -178,7 +178,8 @@ if (version_compare($argon_last_version, $GLOBALS['theme_version'], '<' )){
 //初次使用时发送安装量统计信息 (数据仅用于统计安装量)
 // [Argon] 使用 WordPress HTTP API替代 file_get_contents
 function post_analytics_info(){
-	$url = 'http://api.solstice23.top/argon_analytics/index.php?domain=' . urlencode($_SERVER['HTTP_HOST']) . '&version=' . urlencode($GLOBALS['theme_version']);
+	$host = isset($_SERVER['HTTP_HOST']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST'])) : '';
+	$url = 'http://api.solstice23.top/argon_analytics/index.php?domain=' . rawurlencode($host) . '&version=' . rawurlencode($GLOBALS['theme_version']);
 	$response = wp_remote_get($url, array('timeout' => 5, 'user-agent' => 'ArgonTheme'));
 	update_option('argon_has_inited', 'true');
 	if (!is_wp_error($response)){
@@ -327,7 +328,8 @@ function argon_get_post_thumbnail($postID = 0){
 		$postID = $post -> ID;
 	}
 	if (has_post_thumbnail()){
-		return apply_filters("argon_post_thumbnail", wp_get_attachment_image_src(get_post_thumbnail_id($postID), "full")[0]);
+		$thumbnail = wp_get_attachment_image_src(get_post_thumbnail_id($postID), "full");
+		return apply_filters("argon_post_thumbnail", is_array($thumbnail) && isset($thumbnail[0]) ? $thumbnail[0] : '');
 	}
 	return apply_filters("argon_post_thumbnail", argon_get_first_image_of_article());
 }
@@ -384,8 +386,9 @@ function get_argon_formatted_paginate_links($maxPageNumbers, $extraClasses = '')
 		if (preg_match('/<span(.*?)>(.*?)<\/span>/' , $pages[0][$i])){
 			$current = $i + 1;
 		}else{
-			preg_match('/<a(.*?)href="(.*?)">(.*?)<\/a>/' , $pages[0][$i] , $tmp);
-			$urls[$i + 1] = $tmp[2];
+			if (preg_match('/<a(.*?)href="(.*?)">(.*?)<\/a>/' , $pages[0][$i] , $tmp)){
+				$urls[$i + 1] = $tmp[2];
+			}
 		}
 	}
 
@@ -402,23 +405,23 @@ function get_argon_formatted_paginate_links($maxPageNumbers, $extraClasses = '')
 	}
 	//生成新页码
 	$html = "";
-	if ($from > 1){
+	if ($from > 1 && isset($urls[1])){
 		$html .= '<li class="page-item"><a aria-label="First Page" class="page-link" href="' . $urls[1] . '"><i class="fa fa-angle-double-left" aria-hidden="true"></i></a></li>';
 	}
-	if ($current > 1){
+	if ($current > 1 && isset($urls[$current - 1])){
 		$html .= '<li class="page-item"><a aria-label="Previous Page" class="page-link" href="' . $urls[$current - 1] . '"><i class="fa fa-angle-left" aria-hidden="true"></i></a></li>';
 	}
 	for ($i = $from; $i <= $to; $i++){
 		if ($current == $i){
 			$html .= '<li class="page-item active"><span class="page-link" style="cursor: default;">' . $i . '</span></li>';
-		}else{
+		}else if (isset($urls[$i])){
 			$html .= '<li class="page-item"><a class="page-link" href="' . $urls[$i] . '">' . $i . '</a></li>';
 		}
 	}
-	if ($current < $total){
+	if ($current < $total && isset($urls[$current + 1])){
 		$html .= '<li class="page-item"><a aria-label="Next Page" class="page-link" href="' . $urls[$current + 1] . '"><i class="fa fa-angle-right" aria-hidden="true"></i></a></li>';
 	}
-	if ($to < $total){
+	if ($to < $total && isset($urls[$total])){
 		$html .= '<li class="page-item"><a aria-label="Last Page" class="page-link" href="' . $urls[$total] . '"><i class="fa fa-angle-double-right" aria-hidden="true"></i></a></li>';
 	}
 	return '<nav><ul class="pagination' . $extraClasses . '">' . $html . '</ul></nav>';
@@ -430,10 +433,23 @@ function get_argon_formatted_paginate_links_for_all_platforms(){
 function get_random_token(){
 	return md5(uniqid(microtime(true), true));
 }
+function argon_get_user_token(){
+	$token = isset($_COOKIE['argon_user_token']) ? wp_unslash($_COOKIE['argon_user_token']) : '';
+	if (!is_string($token) || !preg_match('/^[a-f0-9]{32}$/i', $token)){
+		return '';
+	}
+	return $token;
+}
 function set_user_token_cookie(){
-	if (!isset($_COOKIE["argon_user_token"]) || strlen($_COOKIE["argon_user_token"]) != 32){
+	if (argon_get_user_token() === ''){
 		$newToken = get_random_token();
-		setcookie("argon_user_token", $newToken, time() + 10 * 365 * 24 * 60 * 60, "/");
+		setcookie("argon_user_token", $newToken, array(
+			'expires' => time() + 10 * 365 * 24 * 60 * 60,
+			'path' => '/',
+			'secure' => is_ssl(),
+			'httponly' => true,
+			'samesite' => 'Lax',
+		));
 		$_COOKIE["argon_user_token"] = $newToken;
 	}
 }
@@ -445,6 +461,65 @@ function session_init(){
 	}
 }
 add_action('init', 'session_init');
+
+function argon_get_request_path(){
+	$request_uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '';
+	$path = parse_url($request_uri, PHP_URL_PATH);
+	return is_string($path) ? $path : '';
+}
+
+function argon_build_url_from_parts($parts, $fallback){
+	if (!is_array($parts) || empty($parts['path'])){
+		return $fallback;
+	}
+	$url = '';
+	if (!empty($parts['scheme']) && !empty($parts['host'])){
+		$url .= $parts['scheme'] . '://' . $parts['host'];
+		if (!empty($parts['port'])){
+			$url .= ':' . $parts['port'];
+		}
+	}
+	$url .= $parts['path'];
+	if (isset($parts['query']) && $parts['query'] !== ''){
+		$url .= '?' . $parts['query'];
+	}
+	if (!empty($parts['fragment'])){
+		$url .= '#' . $parts['fragment'];
+	}
+	return $url;
+}
+
+function argon_post_meta_requires_unfiltered_html($meta_key){
+	return in_array($meta_key, array('argon_after_post', 'argon_custom_css'), true);
+}
+
+function argon_current_user_can_save_post_meta($post_id, $meta_key){
+	if (!current_user_can('edit_post', $post_id)){
+		return false;
+	}
+	if (argon_post_meta_requires_unfiltered_html($meta_key) && !current_user_can('unfiltered_html')){
+		return false;
+	}
+	return true;
+}
+
+function argon_sanitize_post_meta_value($meta_key, $value){
+	$value = is_string($value) ? wp_unslash($value) : '';
+	switch ($meta_key){
+		case 'argon_hide_readingtime':
+		case 'argon_meta_simple':
+			return in_array($value, array('true', 'false'), true) ? $value : 'false';
+		case 'argon_first_image_as_thumbnail':
+			return in_array($value, array('default', 'true', 'false'), true) ? $value : 'default';
+		case 'argon_show_post_outdated_info':
+			return in_array($value, array('default', 'always', 'never'), true) ? $value : 'default';
+		case 'argon_after_post':
+		case 'argon_custom_css':
+			return $value;
+		default:
+			return sanitize_text_field($value);
+	}
+}
 //页面 Description Meta
 function get_seo_description(){
 	global $post;
@@ -499,53 +574,68 @@ function get_og_image(){
 	return '';
 }
 //页面浏览量
+function argon_normalize_views_count($count){
+	if (is_numeric($count)){
+		return max(0, (int) $count);
+	}
+	return absint(preg_replace('/[^\d]/', '', (string) $count));
+}
 function get_post_views($post_id){
 	$count_key = 'views';
 	$count = get_post_meta($post_id, $count_key, true);
 	if ($count === '' || $count === false || $count === null || $count === '0'){
 		$count = '0';
 	}
-	return number_format_i18n($count);
+	return number_format_i18n(argon_normalize_views_count($count));
+}
+function argon_increment_post_views($post_id){
+	global $wpdb;
+	$post_id = absint($post_id);
+	if ($post_id <= 0){
+		return false;
+	}
+	$count_key = 'views';
+	$updated = $wpdb->query(
+		$wpdb->prepare(
+			"UPDATE {$wpdb->postmeta} SET meta_value = CAST(meta_value AS UNSIGNED) + 1 WHERE post_id = %d AND meta_key = %s",
+			$post_id,
+			$count_key
+		)
+	);
+	if ($updated === false){
+		return false;
+	}
+	if ($updated < 1 && !add_post_meta($post_id, $count_key, '1', true)){
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->postmeta} SET meta_value = CAST(meta_value AS UNSIGNED) + 1 WHERE post_id = %d AND meta_key = %s",
+				$post_id,
+				$count_key
+			)
+		);
+	}
+	wp_cache_delete($post_id, 'post_meta');
+	return true;
 }
 function set_post_views(){
 	if (!is_single() && !is_page()) {
 		return;
 	}
-	if (!isset($post_id)){
-		global $post;
-		$post_id = $post -> ID;
+	$post_id = get_queried_object_id();
+	if (!$post_id){
+		return;
 	}
 	if (post_password_required($post_id)){
 		return;
 	}
-	if (isset($_GET['preview'])){
-		if ($_GET['preview'] == 'true'){
-			if (current_user_can('publish_posts')){
-				return;
-			}
-		}
+	if (is_preview() && current_user_can('edit_post', $post_id)){
+		return;
 	}
-	$noPostView = 'false';
-	if (isset($_POST['no_post_view'])){
-		$noPostView = $_POST['no_post_view'];
-	}
+	$noPostView = isset($_POST['no_post_view']) ? sanitize_text_field(wp_unslash($_POST['no_post_view'])) : 'false';
 	if ($noPostView == 'true'){
 		return;
 	}
-	global $post;
-	if (!isset($post -> ID)){
-		return;
-	}
-	$post_id = $post -> ID;
-	$count_key = 'views';
-	$count = get_post_meta($post_id, $count_key, true);
-	if (is_single() || is_page()) {
-		if ($count === '' || $count === false || $count === null || $count === '0'){
-			update_post_meta($post_id, $count_key, '1');
-		} else {
-			update_post_meta($post_id, $count_key, intval($count) + 1);
-		}
-	}
+	argon_increment_post_views($post_id);
 }
 add_action('get_header', 'set_post_views');
 //字数和预计阅读时间
@@ -556,7 +646,7 @@ function get_article_words($str){
 	foreach ($codeSegments as $codeSegment){
 		$codeLines = preg_split('/\r\n|\n|\r/', $codeSegment);
 		foreach ($codeLines as $line){
-			if (strlen(trim($str)) > 0){
+			if (strlen(trim($line)) > 0){
 				$codeTotal++;
 			}
 		}
@@ -745,11 +835,12 @@ function is_meta_simple(){
 }
 //根据文章 id 获取标题
 function get_post_title_by_id($id){
-	return get_post($id) -> post_title;
+	$post = get_post($id);
+	return $post ? $post -> post_title : '';
 }
 //解析 UA 和相应图标
 require_once(get_template_directory() . '/useragent-parser.php');
-$argon_comment_ua = get_option("argon_comment_ua");
+$argon_comment_ua = strval(get_option("argon_comment_ua"));
 $argon_comment_show_ua = Array();
 if (str_contains($argon_comment_ua, 'platform')){
 	$argon_comment_show_ua['platform'] = true;
@@ -799,10 +890,11 @@ function check_email_address($email){
 }
 //检验评论 Token 和用户 Token 是否一致
 function check_comment_token($id){
-	if (strlen($_COOKIE['argon_user_token']) != 32){
+	$user_token = argon_get_user_token();
+	if ($user_token === ''){
 		return false;
 	}
-	if ($_COOKIE['argon_user_token'] != get_comment_meta($id, "user_token", true)){
+	if ($user_token != get_comment_meta($id, "user_token", true)){
 		return false;
 	}
 	return true;
@@ -819,7 +911,7 @@ function check_login_user_same($userid){
 }
 function get_comment_user_id_by_id($comment_ID){
 	$comment = get_comment($comment_ID);
-	return $comment -> user_id;
+	return $comment ? $comment -> user_id : 0;
 }
 function check_comment_userid($id){
 	if (!check_login_user_same(get_comment_user_id_by_id($id))){
@@ -841,7 +933,7 @@ function user_can_view_comment($id){
 	if (current_user_can("manage_options")){
 		return true;
 	}
-	if ($_COOKIE['argon_user_token'] == get_comment_meta($id, "private_mode", true)){
+	if (argon_get_user_token() == get_comment_meta($id, "private_mode", true)){
 		return true;
 	}
 	return false;
@@ -858,7 +950,7 @@ add_filter('the_title_rss' , 'remove_rss_private_comment_title_and_author');
 add_filter('comment_author_rss' , 'remove_rss_private_comment_title_and_author');
 function remove_rss_private_comment_content($str){
 	global $comment;
-	if (is_comment_private_mode($comment -> comment_ID)){
+	if (isset($comment -> comment_ID) && is_comment_private_mode($comment -> comment_ID)){
 		$comment -> comment_content = __('该评论为悄悄话', 'argon');
 		return $comment -> comment_content;
 	}
@@ -874,6 +966,9 @@ function get_comment_parent_info($comment){
 		return "";
 	}
 	$parent_comment = get_comment($comment -> comment_parent);
+	if ($parent_comment == null){
+		return "";
+	}
 	return '<div class="comment-parent-info" data-parent-id=' . $parent_comment -> comment_ID . '><i class="fa fa-reply" aria-hidden="true"></i> ' . get_comment_author($parent_comment -> comment_ID) . '</div>';
 }
 //是否可以查看评论编辑记录
@@ -892,47 +987,56 @@ function can_visit_comment_edit_history($id){
 //获取评论编辑记录
 function get_comment_edit_history(){
 	// [Argon] Nonce 验证
-	if (!isset($_POST['argon_next_nonce']) || !wp_verify_nonce($_POST['argon_next_nonce'], 'argon_next_ajax_nonce')){
+	if (!isset($_POST['argon_next_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['argon_next_nonce'])), 'argon_next_ajax_nonce')){
 		wp_send_json_error(array('msg' => __('安全验证失败', 'argon')));
 	}
-	$id = absint($_POST['id']);
+	$id = isset($_POST['id']) ? absint(wp_unslash($_POST['id'])) : 0;
 	if (!can_visit_comment_edit_history($id)){
-		exit(json_encode(array(
-			'id' => $_POST['id'],
+		wp_send_json(array(
+			'id' => $id,
 			'history' => ""
-		)));
+		));
 	}
 	$editHistory = json_decode(get_comment_meta($id, "comment_edit_history", true));
+	if (!is_array($editHistory)){
+		$editHistory = array();
+	}
 	$editHistory = array_reverse($editHistory);
 	$res = "";
 	$position = count($editHistory) + 1;
-	date_default_timezone_set(get_option('timezone_string'));
 	foreach ($editHistory as $edition){
 		$position -= 1;
+		$edition_content = isset($edition -> content) ? esc_html($edition -> content) : '';
+		$edition_time = isset($edition -> time) ? absint($edition -> time) : time();
+		$is_first = !empty($edition -> isfirst);
 		$res .= "<div class='comment-edit-history-item'>
 					<div class='comment-edit-history-title'>
 						<div class='comment-edit-history-id'>
 							#" . $position . "
 						</div>
-						" . ($edition -> isfirst ? "<span class='badge badge-primary badge-admin'>" . __("最初版本", 'argon') . "</span>" : "") . "
+						" . ($is_first ? "<span class='badge badge-primary badge-admin'>" . __("最初版本", 'argon') . "</span>" : "") . "
 					</div>
-					<div class='comment-edit-history-time'>" . date('Y-m-d H:i:s', $edition -> time) . "</div>
-					<div class='comment-edit-history-content'>" . str_replace("\n", "</br>", $edition -> content) . "</div>
+					<div class='comment-edit-history-time'>" . esc_html(wp_date('Y-m-d H:i:s', $edition_time)) . "</div>
+					<div class='comment-edit-history-content'>" . str_replace("\n", "</br>", $edition_content) . "</div>
 				</div>";
 	}
-	exit(json_encode(array(
-		'id' => $_POST['id'],
+	wp_send_json(array(
+		'id' => $id,
 		'history' => $res
-	)));
+	));
 }
 add_action('wp_ajax_get_comment_edit_history', 'get_comment_edit_history');
 add_action('wp_ajax_nopriv_get_comment_edit_history', 'get_comment_edit_history');
 //是否可以置顶/取消置顶
 function is_comment_pinable($id){
-	if (get_comment($id) -> comment_approved != "1"){
+	$comment = get_comment($id);
+	if ($comment == null){
 		return false;
 	}
-	if (get_comment($id) -> comment_parent != 0){
+	if ($comment -> comment_approved != "1"){
+		return false;
+	}
+	if ($comment -> comment_parent != 0){
 		return false;
 	}
 	if (is_comment_private_mode($id)){
@@ -1011,7 +1115,7 @@ function set_comment_upvotes($id){
 	return $upvotes;
 }
 function is_comment_upvoted($id){
-	$upvotedList = $_COOKIE['argon_comment_upvoted'] ?? '';
+	$upvotedList = isset($_COOKIE['argon_comment_upvoted']) ? sanitize_text_field(wp_unslash($_COOKIE['argon_comment_upvoted'])) : '';
 	if (str_contains(',' . $upvotedList . ',', ',' . $id . ',')){
 		return true;
 	}
@@ -1022,10 +1126,10 @@ function upvote_comment(){
 		return;
 	}
 	// [Argon] Nonce 验证 & 输入清理
-	if (!isset($_POST['argon_next_nonce']) || !wp_verify_nonce($_POST['argon_next_nonce'], 'argon_next_ajax_nonce')){
+	if (!isset($_POST['argon_next_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['argon_next_nonce'])), 'argon_next_ajax_nonce')){
 		wp_send_json_error(array('msg' => __('安全验证失败', 'argon')));
 	}
-	$ID = absint($_POST['comment_id']);
+	$ID = isset($_POST['comment_id']) ? absint(wp_unslash($_POST['comment_id'])) : 0;
 	$comment = get_comment($ID);
 	if ($comment == null){
 		exit(json_encode(array(
@@ -1034,7 +1138,7 @@ function upvote_comment(){
 			'total_upvote' => 0
 		)));
 	}
-	$upvotedList = $_COOKIE['argon_comment_upvoted'] ?? '';
+	$upvotedList = isset($_COOKIE['argon_comment_upvoted']) ? sanitize_text_field(wp_unslash($_COOKIE['argon_comment_upvoted'])) : '';
 	if (in_array($ID, explode(',', $upvotedList))){
 		exit(json_encode(array(
 			'status' => 'failed',
@@ -1043,7 +1147,13 @@ function upvote_comment(){
 		)));
 	}
 	set_comment_upvotes($ID);
-	setcookie('argon_comment_upvoted', $upvotedList . $ID . "," , time() + 3153600000 , '/');
+	setcookie('argon_comment_upvoted', $upvotedList . $ID . "," , array(
+		'expires' => time() + 3153600000,
+		'path' => '/',
+		'secure' => is_ssl(),
+		'httponly' => true,
+		'samesite' => 'Lax',
+	));
 	exit(json_encode(array(
 		'ID' => $ID,
 		'status' => 'success',
@@ -1270,7 +1380,7 @@ function check_comment_captcha($comment){
 	if (get_option('argon_comment_need_captcha') == 'false'){
 		return $comment;
 	}
-	$answer = $_POST['comment_captcha'];
+	$answer = isset($_POST['comment_captcha']) ? sanitize_text_field(wp_unslash($_POST['comment_captcha'])) : '';
 	if(current_user_can('moderate_comments')){
 		return $comment;
 	}
@@ -1294,7 +1404,7 @@ add_action('wp_ajax_get_captcha', 'ajax_get_captcha');
 add_action('wp_ajax_nopriv_get_captcha', 'ajax_get_captcha');
 //Ajax 发送评论
 function ajax_post_comment(){
-	$parentID = $_POST['comment_parent'];
+	$parentID = isset($_POST['comment_parent']) ? absint(wp_unslash($_POST['comment_parent'])) : 0;
 	if (is_comment_private_mode($parentID)){
 		if (!user_can_view_comment($parentID)){
 			//如果父级评论是悄悄话模式且当前 Token 与父级不相同则返回
@@ -1306,9 +1416,10 @@ function ajax_post_comment(){
 		}
 	}
 	if (get_option('argon_comment_enable_qq_avatar') == 'true'){
-		if (check_qqnumber($_POST['email'])){
-			$_POST['qq'] = $_POST['email'];
-			$_POST['email'] .= "@qq.com";
+		$email = isset($_POST['email']) ? sanitize_text_field(wp_unslash($_POST['email'])) : '';
+		if (check_qqnumber($email)){
+			$_POST['qq'] = $email;
+			$_POST['email'] = $email . "@qq.com";
 		}else{
 			$_POST['qq'] = "";
 		}
@@ -1330,7 +1441,7 @@ function ajax_post_comment(){
 	if (isset($_POST['qq'])){
 		if (!empty($_POST['qq']) && get_option('argon_comment_enable_qq_avatar') == 'true'){
 			$_comment = $comment;
-			$_comment -> comment_author_email = $_POST['qq'] . "@avatarqq.com";
+			$_comment -> comment_author_email = sanitize_text_field(wp_unslash($_POST['qq'])) . "@avatarqq.com";
 			do_action('set_comment_cookies', $_comment, $user);
 		}
 	}
@@ -1403,7 +1514,8 @@ function post_comment_preprocessing($comment){
 	//保存评论未经 Markdown 解析的源码
 	$_POST['comment_content_source'] = $comment['comment_content'];
 	//Markdown
-	if ($_POST['use_markdown'] == 'true' && get_option("argon_comment_allow_markdown") != "false"){
+	$use_markdown = isset($_POST['use_markdown']) ? sanitize_text_field(wp_unslash($_POST['use_markdown'])) : 'false';
+	if ($use_markdown == 'true' && get_option("argon_comment_allow_markdown") != "false"){
 		$comment['comment_content'] = comment_markdown_parse($comment['comment_content']);
 	}
 	return $comment;
@@ -1493,32 +1605,37 @@ function comment_mail_notify($comment){
 }
 //评论发送完成添加 Meta
 function post_comment_updatemetas($id){
-	$parentID = $_POST['comment_parent'];
+	$parentID = isset($_POST['comment_parent']) ? absint(wp_unslash($_POST['comment_parent'])) : 0;
 	$comment = get_comment($id);
 	$commentPostID = $comment -> comment_post_ID;
 	$commentAuthor = $comment -> comment_author;
 	$mailnoticeUnsubscribeKey = get_random_token();
+	$comment_content_source = isset($_POST['comment_content_source']) ? wp_unslash($_POST['comment_content_source']) : '';
+	$use_markdown = isset($_POST['use_markdown']) ? sanitize_text_field(wp_unslash($_POST['use_markdown'])) : 'false';
+	$private_mode = isset($_POST['private_mode']) ? sanitize_text_field(wp_unslash($_POST['private_mode'])) : 'false';
+	$enable_mailnotice = isset($_POST['enable_mailnotice']) ? sanitize_text_field(wp_unslash($_POST['enable_mailnotice'])) : 'false';
 	//评论 Markdown 源码
-	update_comment_meta($id, "comment_content_source", $_POST['comment_content_source']);
+	update_comment_meta($id, "comment_content_source", $comment_content_source);
 	//评论者 Token
 	set_user_token_cookie();
-	update_comment_meta($id, "user_token", $_COOKIE["argon_user_token"]);
+	$user_token = argon_get_user_token();
+	update_comment_meta($id, "user_token", $user_token);
 	//保存初次编辑记录
 	$editHistory = array(array(
-		'content' => $_POST['comment_content_source'],
+		'content' => $comment_content_source,
 		'time' => time(),
 		'isfirst' => true
 	));
-	update_comment_meta($id, "comment_edit_history", addslashes(json_encode($editHistory, JSON_UNESCAPED_UNICODE)));
+	update_comment_meta($id, "comment_edit_history", addslashes(wp_json_encode($editHistory, JSON_UNESCAPED_UNICODE)));
 	//是否启用 Markdown
-	if ($_POST['use_markdown'] == 'true' && get_option("argon_comment_allow_markdown") != "false"){
+	if ($use_markdown == 'true' && get_option("argon_comment_allow_markdown") != "false"){
 		update_comment_meta($id, "use_markdown", "true");
 	}else{
 		update_comment_meta($id, "use_markdown", "false");
 	}
 	//是否启用悄悄话模式
-	if ($_POST['private_mode'] == 'true' && get_option("argon_comment_allow_privatemode") == "true"){
-		update_comment_meta($id, "private_mode", $_COOKIE["argon_user_token"]);
+	if ($private_mode == 'true' && get_option("argon_comment_allow_privatemode") == "true"){
+		update_comment_meta($id, "private_mode", $user_token);
 	}else{
 		update_comment_meta($id, "private_mode", "false");
 	}
@@ -1531,7 +1648,7 @@ function post_comment_updatemetas($id){
 		update_comment_meta($id, "private_mode", "false");
 	}
 	//是否启用邮件通知
-	if ($_POST['enable_mailnotice'] == 'true' && get_option("argon_comment_allow_mailnotice") == "true"){
+	if ($enable_mailnotice == 'true' && get_option("argon_comment_allow_mailnotice") == "true"){
 		update_comment_meta($id, "enable_mailnotice", "true");
 		update_comment_meta($id, "mailnotice_unsubscribe_key", $mailnoticeUnsubscribeKey);
 	}else{
@@ -1544,7 +1661,7 @@ function post_comment_updatemetas($id){
 	//保存 QQ 号
 	if (get_option('argon_comment_enable_qq_avatar') == 'true'){
 		if (!empty($_POST['qq'])){
-			update_comment_meta($id, "qq_number", $_POST['qq']);
+			update_comment_meta($id, "qq_number", sanitize_text_field(wp_unslash($_POST['qq'])));
 		}
 	}
 }
@@ -1560,8 +1677,14 @@ function user_edit_comment(){
 			'msg' => __('博主关闭了编辑评论功能', 'argon')
 		)));
 	}
-	$id = $_POST["id"];
-	$content = $_POST["comment"];
+	if (!isset($_POST['argon_next_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['argon_next_nonce'])), 'argon_next_ajax_nonce')){
+		wp_send_json(array(
+			'status' => 'failed',
+			'msg' => __('安全验证失败', 'argon')
+		), 403);
+	}
+	$id = isset($_POST["id"]) ? absint(wp_unslash($_POST["id"])) : 0;
+	$content = isset($_POST["comment"]) ? wp_unslash($_POST["comment"]) : '';
 	$contentSource = $content;
 	if (!check_comment_token($id) && !check_login_user_same(get_comment_user_id_by_id($id))){
 		exit(json_encode(array(
@@ -1569,7 +1692,7 @@ function user_edit_comment(){
 			'msg' => __('您不是这条评论的作者或 Token 已过期', 'argon')
 		)));
 	}
-	if ($_POST["comment"] == ""){
+	if ($content == ""){
 		exit(json_encode(array(
 			'status' => 'failed',
 			'msg' => __('新的评论为空', 'argon')
@@ -1587,15 +1710,15 @@ function user_edit_comment(){
 		update_comment_meta($id, "edited", "true");
 		//保存编辑历史
 		$editHistory = json_decode(get_comment_meta($id, "comment_edit_history", true));
-		if (is_null($editHistory)){
+		if (!is_array($editHistory)){
 			$editHistory = array();
 		}
 		array_push($editHistory, array(
-			'content' => htmlspecialchars(stripslashes($contentSource)),
+			'content' => $contentSource,
 			'time' => time(),
 			'isfirst' => false
 		));
-		update_comment_meta($id, "comment_edit_history", addslashes(json_encode($editHistory, JSON_UNESCAPED_UNICODE)));
+		update_comment_meta($id, "comment_edit_history", addslashes(wp_json_encode($editHistory, JSON_UNESCAPED_UNICODE)));
 		exit(json_encode(array(
 			'status' => 'success',
 			'msg' => __('编辑评论成功', 'argon'),
@@ -1627,8 +1750,21 @@ function pin_comment(){
 			'msg' => __('您没有权限进行此操作', 'argon')
 		)));
 	}
-	$id = $_POST["id"];
-	$newPinnedStat = $_POST["pinned"] == "true";
+	if (!isset($_POST['argon_next_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['argon_next_nonce'])), 'argon_next_ajax_nonce')){
+		wp_send_json(array(
+			'status' => 'failed',
+			'msg' => __('安全验证失败', 'argon')
+		), 403);
+	}
+	$id = isset($_POST["id"]) ? absint(wp_unslash($_POST["id"])) : 0;
+	$newPinnedStat = isset($_POST["pinned"]) && sanitize_text_field(wp_unslash($_POST["pinned"])) == "true";
+	$comment = get_comment($id);
+	if ($comment == null){
+		exit(json_encode(array(
+			'status' => 'failed',
+			'msg' => __('评论不存在', 'argon')
+		)));
+	}
 	$origPinnedStat = get_comment_meta($id, "pinned", true) == "true";
 	if ($newPinnedStat == $origPinnedStat){
 		exit(json_encode(array(
@@ -1636,7 +1772,7 @@ function pin_comment(){
 			'msg' => $newPinnedStat ? __('评论已经是置顶状态', 'argon') : __('评论已经是取消置顶状态', 'argon')
 		)));
 	}
-	if (get_comment($id) -> comment_parent != 0){
+	if ($comment -> comment_parent != 0){
 		exit(json_encode(array(
 			'status' => 'failed',
 			'msg' => __('不能置顶子评论', 'argon')
@@ -1692,8 +1828,9 @@ function get_argon_formatted_comment_paginate_links($maxPageNumbers, $extraClass
 		if (preg_match('/<span(.*?)>(.*?)<\/span>/' , $pages[0][$i])){
 			$current = $i + 1;
 		}else{
-			preg_match('/<a(.*?)href="(.*?)">(.*?)<\/a>/' , $pages[0][$i] , $tmp);
-			$urls[$i + 1] = $tmp[2];
+			if (preg_match('/<a(.*?)href="(.*?)">(.*?)<\/a>/' , $pages[0][$i] , $tmp)){
+				$urls[$i + 1] = $tmp[2];
+			}
 		}
 	}
 
@@ -1710,23 +1847,23 @@ function get_argon_formatted_comment_paginate_links($maxPageNumbers, $extraClass
 	}
 	//生成新页码
 	$html = "";
-	if ($from > 1){
+	if ($from > 1 && isset($urls[1])){
 		$html .= '<li class="page-item"><div aria-label="First Page" class="page-link" href="' . $urls[1] . '"><i class="fa fa-angle-double-left" aria-hidden="true"></i></div></li>';
 	}
-	if ($current > 1){
+	if ($current > 1 && isset($urls[$current - 1])){
 		$html .= '<li class="page-item"><div aria-label="Previous Page" class="page-link" href="' . $urls[$current - 1] . '"><i class="fa fa-angle-left" aria-hidden="true"></i></div></li>';
 	}
 	for ($i = $from; $i <= $to; $i++){
 		if ($current == $i){
 			$html .= '<li class="page-item active"><span class="page-link" style="cursor: default;">' . $i . '</span></li>';
-		}else{
+		}else if (isset($urls[$i])){
 			$html .= '<li class="page-item"><div class="page-link" href="' . $urls[$i] . '">' . $i . '</div></li>';
 		}
 	}
-	if ($current < $total){
+	if ($current < $total && isset($urls[$current + 1])){
 		$html .= '<li class="page-item"><div aria-label="Next Page" class="page-link" href="' . $urls[$current + 1] . '"><i class="fa fa-angle-right" aria-hidden="true"></i></div></li>';
 	}
-	if ($to < $total){
+	if ($to < $total && isset($urls[$total])){
 		$html .= '<li class="page-item"><div aria-label="Last Page" class="page-link" href="' . $urls[$total] . '"><i class="fa fa-angle-double-right" aria-hidden="true"></i></div></li>';
 	}
 	return '<nav id="comments_navigation" class="comments-navigation"><ul class="pagination' . $extraClasses . '">' . $html . '</ul></nav>';
@@ -1761,15 +1898,18 @@ function get_argon_comment_paginate_links_prev_url(){
 		return NULL;
 	}
 	
-	if (isset($_GET['fill_first_page']) || !str_contains(parse_url($_SERVER['REQUEST_URI'])['path'], 'comment-page-')){
+	if (isset($_GET['fill_first_page']) || !str_contains(argon_get_request_path(), 'comment-page-')){
 		$parsed_url = parse_url($url[1]);
+		if (!is_array($parsed_url)){
+			return $url[1];
+		}
 		if (!isset($parsed_url['query'])){
 			$parsed_url['query'] = 'fill_first_page=true';
 		}else
 			if (!str_contains($parsed_url['query'], 'fill_first_page=true')){
 			$parsed_url['query'] .= '&fill_first_page=true';
 		}
-		return $parsed_url['scheme'] . '://' . $parsed_url['host'] . $parsed_url['path'] . '?' . $parsed_url['query'];
+		return argon_build_url_from_parts($parsed_url, $url[1]);
 	}
 	return $url[1];
 }
@@ -1827,7 +1967,7 @@ function argon_get_comments(){
 	if (get_option("argon_comment_pagination_type", "feed") == "page"){
 		return $comments;
 	}
-	if (!isset($_GET['fill_first_page']) && str_contains(parse_url($_SERVER['REQUEST_URI'])['path'], 'comment-page-')){
+	if (!isset($_GET['fill_first_page']) && str_contains(argon_get_request_path(), 'comment-page-')){
 		return null;
 	}
 	$comments_per_page = get_option('comments_per_page');
@@ -1853,8 +1993,8 @@ function get_avatar_by_qqnumber($avatar){
 	$qqnumber = get_comment_meta($comment -> comment_ID, 'qq_number', true);
 	if (!empty($qqnumber)){
 		preg_match_all('/width=\'(.*?)\'/', $avatar, $preg_res);
-		$size = $preg_res[1][0];
-		return "<img src='https://q1.qlogo.cn/g?b=qq&s=640&nk=" . $qqnumber ."' class='avatar avatar-" . $size . " photo' width='" . $size . "' height='" . $size . "'>";
+		$size = isset($preg_res[1][0]) ? absint($preg_res[1][0]) : 96;
+		return "<img src='https://q1.qlogo.cn/g?b=qq&s=640&nk=" . esc_attr($qqnumber) ."' class='avatar avatar-" . $size . " photo' width='" . $size . "' height='" . $size . "'>";
 	}
 	return $avatar;
 }
@@ -1884,6 +2024,9 @@ function get_banner_background_url(){
 			// [Argon] 使用 wp_remote_get 替代 file_get_contents
 			$bing_response = wp_remote_get('https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1', array('timeout' => 10));
 			$data = is_wp_error($bing_response) ? null : json_decode(wp_remote_retrieve_body($bing_response), true);
+			if (!is_array($data) || empty($data['images'][0]['url'])){
+				return get_option("argon_bing_banner_background_last_updated_url");
+			}
 			$url = "//bing.com" . $data['images'][0]['url'];
 			update_option("argon_bing_banner_background_last_updated_time" , $now);
 			update_option("argon_bing_banner_background_last_updated_url" , $url);
@@ -1982,11 +2125,11 @@ function set_shuoshuo_upvotes($ID){
 }
 function upvote_shuoshuo(){
 	// [Argon] Nonce 验证 & 输入清理
-	if (!isset($_POST['argon_next_nonce']) || !wp_verify_nonce($_POST['argon_next_nonce'], 'argon_next_ajax_nonce')){
+	if (!isset($_POST['argon_next_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['argon_next_nonce'])), 'argon_next_ajax_nonce')){
 		wp_send_json_error(array('msg' => __('安全验证失败', 'argon')));
 	}
-	$ID = absint($_POST['shuoshuo_id']);
-	$upvotedList = $_COOKIE['argon_shuoshuo_upvoted'] ?? '';
+	$ID = isset($_POST['shuoshuo_id']) ? absint(wp_unslash($_POST['shuoshuo_id'])) : 0;
+	$upvotedList = isset($_COOKIE['argon_shuoshuo_upvoted']) ? sanitize_text_field(wp_unslash($_COOKIE['argon_shuoshuo_upvoted'])) : '';
 	if (in_array($ID, explode(',', $upvotedList))){
 		exit(json_encode(array(
 			'status' => 'failed',
@@ -1995,7 +2138,13 @@ function upvote_shuoshuo(){
 		)));
 	}
 	set_shuoshuo_upvotes($ID);
-	setcookie('argon_shuoshuo_upvoted', $upvotedList . $ID . "," , time() + 3153600000 , '/');
+	setcookie('argon_shuoshuo_upvoted', $upvotedList . $ID . "," , array(
+		'expires' => time() + 3153600000,
+		'path' => '/',
+		'secure' => is_ssl(),
+		'httponly' => true,
+		'samesite' => 'Lax',
+	));
 	exit(json_encode(array(
 		'ID' => $ID,
 		'status' => 'success',
@@ -2025,6 +2174,9 @@ function check_footer_copyright(){
 		WP_Filesystem();
 	}
 	$footer = $wp_filesystem->get_contents(get_theme_root() . "/" . wp_get_theme() -> template . "/footer.php");
+	if (!is_string($footer)){
+		return;
+	}
 	if ((!str_contains($footer, "github.com/solstice23/argon-theme")) && (!str_contains($footer, "solstice23.top"))){
 		set_transient('argon_next_footer_copyright_check', 'changed', DAY_IN_SECONDS);
 		add_action('admin_notices', 'alert_footer_copyright_changed');
@@ -2206,11 +2358,11 @@ function argon_meta_box_1(){
 		<p style="margin-top: 15px;"><?php _e("单独控制该文章的过时信息显示。", 'argon');?></p>
 		<h4><?php _e("文末附加内容", 'argon');?></h4>
 		<?php $argon_after_post = get_post_meta($post->ID, "argon_after_post", true);?>
-		<textarea name="argon_after_post" id="argon_after_post" rows="3" cols="30" style="width:100%;"><?php if (!empty($argon_after_post)){echo $argon_after_post;} ?></textarea>
+		<textarea name="argon_after_post" id="argon_after_post" rows="3" cols="30" style="width:100%;"><?php if (!empty($argon_after_post)){echo esc_textarea($argon_after_post);} ?></textarea>
 		<p style="margin-top: 15px;"><?php _e("给该文章设置单独的文末附加内容，留空则跟随全局，设为 <code>--none--</code> 则不显示。", 'argon');?></p>
 		<h4><?php _e("自定义 CSS", 'argon');?></h4>
 		<?php $argon_custom_css = get_post_meta($post->ID, "argon_custom_css", true);?>
-		<textarea name="argon_custom_css" id="argon_custom_css" rows="5" cols="30" style="width:100%;"><?php if (!empty($argon_custom_css)){echo $argon_custom_css;} ?></textarea>
+		<textarea name="argon_custom_css" id="argon_custom_css" rows="5" cols="30" style="width:100%;"><?php if (!empty($argon_custom_css)){echo esc_textarea($argon_custom_css);} ?></textarea>
 		<p style="margin-top: 15px;"><?php _e("给该文章添加单独的 CSS", 'argon');?></p>
 
 		<script>$ = window.jQuery;</script>
@@ -2267,87 +2419,97 @@ function argon_add_meta_boxes(){
 	add_meta_box('argon_meta_box_1', __("文章设置", 'argon'), 'argon_meta_box_1', array('post', 'page'), 'side', 'low');
 }
 add_action('admin_menu', 'argon_add_meta_boxes');
-function argon_save_meta_data($post_id){
-	if (!isset($_POST['argon_meta_box_nonce'])){
-		return $post_id;
-	}
-	$nonce = $_POST['argon_meta_box_nonce'];
-	if (!wp_verify_nonce($nonce, 'argon_meta_box_nonce_action')){
-		return $post_id;
-	}
-	if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE){
-		return $post_id;
-	}
-	if ($_POST['post_type'] == 'post'){
-		if (!current_user_can('edit_post', $post_id)){
-			return $post_id;
-		}
-	}
-	if ($_POST['post_type'] == 'page'){
-		if (!current_user_can('edit_page', $post_id)){
-			return $post_id;
-		}
-	}
-	update_post_meta($post_id, 'argon_hide_readingtime', $_POST['argon_meta_hide_readingtime']);
-	update_post_meta($post_id, 'argon_meta_simple', $_POST['argon_meta_simple']);
-	update_post_meta($post_id, 'argon_first_image_as_thumbnail', $_POST['argon_first_image_as_thumbnail']);
-	update_post_meta($post_id, 'argon_show_post_outdated_info', $_POST['argon_show_post_outdated_info']);
-	update_post_meta($post_id, 'argon_after_post', $_POST['argon_after_post']);
-	update_post_meta($post_id, 'argon_custom_css', $_POST['argon_custom_css']);
-}
-add_action('save_post', 'argon_save_meta_data');
-function update_post_meta_ajax(){
-	if (!isset($_POST['argon_meta_box_nonce'])){
-		return;
-	}
-	$nonce = $_POST['argon_meta_box_nonce'];
-	if (!wp_verify_nonce($nonce, 'argon_meta_box_nonce_action')){
-		return;
-	}
-	header('Content-Type:application/json; charset=utf-8');
-	if (!isset($_POST["post_id"]) || !isset($_POST["meta_key"]) || !isset($_POST["meta_value"])){
-		status_header(400);
-		exit(json_encode(array(
-			'status' => 'failed',
-			'message' => 'invalid_request'
-		)));
-	}
-	$post_id = intval($_POST["post_id"]);
-	$meta_key = $_POST["meta_key"];
-	$meta_value = $_POST["meta_value"];
-	$allowed_meta_keys = array(
+function argon_supported_post_meta_keys(){
+	return array(
 		'argon_hide_readingtime',
 		'argon_meta_simple',
 		'argon_first_image_as_thumbnail',
 		'argon_show_post_outdated_info',
 		'argon_after_post',
-		'argon_custom_css'
+		'argon_custom_css',
 	);
+}
+function argon_save_meta_data($post_id){
+	if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)){
+		return $post_id;
+	}
+	if (!isset($_POST['argon_meta_box_nonce'])){
+		return $post_id;
+	}
+	$nonce = sanitize_text_field(wp_unslash($_POST['argon_meta_box_nonce']));
+	if (!wp_verify_nonce($nonce, 'argon_meta_box_nonce_action')){
+		return $post_id;
+	}
+	if (!current_user_can('edit_post', $post_id)){
+		return $post_id;
+	}
+	$meta_fields = array(
+		'argon_meta_hide_readingtime' => 'argon_hide_readingtime',
+		'argon_meta_simple' => 'argon_meta_simple',
+		'argon_first_image_as_thumbnail' => 'argon_first_image_as_thumbnail',
+		'argon_show_post_outdated_info' => 'argon_show_post_outdated_info',
+		'argon_after_post' => 'argon_after_post',
+		'argon_custom_css' => 'argon_custom_css',
+	);
+	foreach ($meta_fields as $field_name => $meta_key){
+		if (!array_key_exists($field_name, $_POST)){
+			continue;
+		}
+		if (!argon_current_user_can_save_post_meta($post_id, $meta_key)){
+			continue;
+		}
+		update_post_meta($post_id, $meta_key, argon_sanitize_post_meta_value($meta_key, $_POST[$field_name]));
+	}
+}
+add_action('save_post', 'argon_save_meta_data');
+function update_post_meta_ajax(){
+	if (!isset($_POST['argon_meta_box_nonce'])){
+		wp_send_json(array(
+			'status' => 'failed',
+			'message' => 'missing_nonce'
+		), 403);
+	}
+	$nonce = sanitize_text_field(wp_unslash($_POST['argon_meta_box_nonce']));
+	if (!wp_verify_nonce($nonce, 'argon_meta_box_nonce_action')){
+		wp_send_json(array(
+			'status' => 'failed',
+			'message' => 'invalid_nonce'
+		), 403);
+	}
+	if (!isset($_POST["post_id"]) || !isset($_POST["meta_key"]) || !isset($_POST["meta_value"])){
+		wp_send_json(array(
+			'status' => 'failed',
+			'message' => 'invalid_request'
+		), 400);
+	}
+	$post_id = absint(wp_unslash($_POST["post_id"]));
+	$meta_key = sanitize_key(wp_unslash($_POST["meta_key"]));
+	$allowed_meta_keys = argon_supported_post_meta_keys();
 
-	if (!current_user_can('edit_post', $post_id) || !in_array($meta_key, $allowed_meta_keys, true)){
-		status_header(403);
-		exit(json_encode(array(
+	if (!$post_id || !get_post($post_id) || !in_array($meta_key, $allowed_meta_keys, true) || !argon_current_user_can_save_post_meta($post_id, $meta_key)){
+		wp_send_json(array(
 			'status' => 'failed',
 			'message' => 'forbidden'
-		)));
+		), 403);
 	}
+	$meta_value = argon_sanitize_post_meta_value($meta_key, $_POST["meta_value"]);
 
 	if (get_post_meta($post_id, $meta_key, true) == $meta_value){
-		exit(json_encode(array(
+		wp_send_json(array(
 			'status' => 'success'
-		)));
+		));
 	}
 
 	$result = update_post_meta($post_id, $meta_key, $meta_value);
 
 	if ($result){
-		exit(json_encode(array(
+		wp_send_json(array(
 			'status' => 'success'
-		)));
+		));
 	}else{
-		exit(json_encode(array(
+		wp_send_json(array(
 			'status' => 'failed'
-		)));
+		), 500);
 	}
 }
 add_action('wp_ajax_update_post_meta_ajax' , 'update_post_meta_ajax');
@@ -2727,7 +2889,7 @@ function shortcode_friend_link($attr,$content=""){
 						<div class='friend-link-description'>" . esc_html($friendlink -> link_description) . "</div>";
 		$out .= "		<div class='friend-link-links'>";
 		foreach (explode("\n", $friendlink -> link_notes) as $line){
-			$item = explode("|", trim($line));
+			$item = array_pad(explode("|", trim($line)), 2, '');
 			if(stripos($item[0], "fa-") !== 0){
 				continue;
 			}
@@ -2754,11 +2916,9 @@ function shortcode_friend_link_simple($attr,$content=""){
 		mt_srand();
 		$group_start = 0;
 		foreach ($entries as $index => $value){
-			$now = explode("|" , $value);
+			$now = array_pad(explode("|" , $value), 5, '');
 			if ($now[0] == 'category'){
-				echo ($index-1).",".$group_start." | ";
 				for ($i = $index - 1; $i >= $group_start; $i--){
-					echo $i."#";
 					$tar = mt_rand($group_start , $i);
 					$tmp = $entries[$tar];
 					$entries[$tar] = $entries[$i];
@@ -2778,7 +2938,7 @@ function shortcode_friend_link_simple($attr,$content=""){
 	$row_tag_open = False;
 	$out = "<div class='friend-links-simple'>";
 	foreach($entries as $index => $value){
-		$now = explode("|" , $value);
+		$now = array_pad(explode("|" , $value), 5, '');
 		if ($now[0] == 'category'){
 			if ($row_tag_open == True){
 				$row_tag_open = False;
@@ -2797,7 +2957,7 @@ function shortcode_friend_link_simple($attr,$content=""){
 					<div class='d-flex'>
 						<div class='friend-link-avatar'>
 							<a target='_blank' href='" . $now[1] . "'>";
-			if (!ctype_space($now[4]) && $now[4] != '' && isset($now[4])){
+			if ($now[4] != '' && !ctype_space($now[4])){
 				$out .= "<img src='" . $now[4] . "' class='icon bg-gradient-secondary rounded-circle text-white' style='pointer-events: none;'>
 						</img>";
 			}else{
@@ -2810,7 +2970,7 @@ function shortcode_friend_link_simple($attr,$content=""){
 						<div class='pl-3'>
 							<div class='friend-link-title title text-primary'><a target='_blank' href='" . $now[1] . "'>" . $now[2] . "</a>
 						</div>";
-			if (!ctype_space($now[3]) && $now[3] != ''  && isset($now[3])){
+			if ($now[3] != '' && !ctype_space($now[3])){
 				$out .= "<p class='friend-link-description'>" . $now[3] . "</p>";
 			}else{
 				/*$out .= "<p class='friend-link-description'>&nbsp;</p>";*/
@@ -2836,7 +2996,7 @@ function shortcode_timeline($attr,$content=""){
 	$entries = explode("\n" , $content);
 	$out = "<div class='argon-timeline'>";
 	foreach($entries as $index => $value){
-		$now = explode("|" , $value);
+		$now = array_pad(explode("|" , $value), 2, '');
 		$now[0] = str_replace("/" , "</br>" , $now[0]);
 		$out .= "<div class='argon-timeline-node'>
 					<div class='argon-timeline-time'>" . $now[0] . "</div>
@@ -2893,34 +3053,33 @@ function shortcode_github($attr,$content=""){
 	$forks = "";
 
 	if ($getdata == "backend"){
-		set_error_handler(function($errno, $errstr, $errfile, $errline, $errcontext) {
+		set_error_handler(function($errno, $errstr, $errfile, $errline) {
 			if (error_reporting() === 0) {
 				return false;
 			}
 			throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
 		});
 		try{
-			$contexts = stream_context_create(
-				array(
-					'http' => array(
-						'method'=>"GET",
-						'header'=>"User-Agent: ArgonTheme\r\n"
-					)
-				)
-			);
 			// [Argon] 使用 wp_remote_get 替代 file_get_contents
 			$gh_resp = wp_remote_get("https://api.github.com/repos/" . $author . "/" . $project, array('timeout' => 10, 'user-agent' => 'ArgonTheme'));
-			$json = is_wp_error($gh_resp) ? '' : wp_remote_retrieve_body($gh_resp);
-			if (empty($json)){
+			if (is_wp_error($gh_resp) || wp_remote_retrieve_response_code($gh_resp) >= 400){
 				throw new Exception("");
 			}
-			$json = json_decode($json);
-			$description = esc_html($json -> description);
-			if (!empty($json -> homepage)){
-				$description .= esc_html(" <a href='" . $json -> homepage . "' target='_blank' no-pjax>" . $json -> homepage . "</a>");
+			$json_body = wp_remote_retrieve_body($gh_resp);
+			if (empty($json_body)){
+				throw new Exception("");
 			}
-			$stars = $json -> stargazers_count;
-			$forks = $json -> forks_count;
+			$json = json_decode($json_body);
+			if (!is_object($json)){
+				throw new Exception("");
+			}
+			$description = isset($json -> description) ? esc_html($json -> description) : "";
+			if (!empty($json -> homepage) && is_string($json -> homepage)){
+				$homepage = esc_url($json -> homepage);
+				$description .= " <a href='" . $homepage . "' target='_blank' rel='noopener' no-pjax>" . esc_html($json -> homepage) . "</a>";
+			}
+			$stars = isset($json -> stargazers_count) ? absint($json -> stargazers_count) : 0;
+			$forks = isset($json -> forks_count) ? absint($json -> forks_count) : 0;
 		}catch (Exception $e){
 			$getdata = "frontend";
 		}
@@ -3099,17 +3258,18 @@ function argon_tinymce_register_button($buttons){
 	return $buttons;
 }
 function argon_tinymce_add_plugin($plugins){
-	$plugins['codeblock'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['label'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['checkbox'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['progressbar'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['alert'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['admonition'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['collapse'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['timeline'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['github'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['video'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
-	$plugins['hiddentext'] = get_bloginfo('template_url') . '/assets/tinymce_assets/tinymce_btns.js';
+	$tinymce_buttons_url = get_template_directory_uri() . '/assets/tinymce_assets/tinymce_btns.js';
+	$plugins['codeblock'] = $tinymce_buttons_url;
+	$plugins['label'] = $tinymce_buttons_url;
+	$plugins['checkbox'] = $tinymce_buttons_url;
+	$plugins['progressbar'] = $tinymce_buttons_url;
+	$plugins['alert'] = $tinymce_buttons_url;
+	$plugins['admonition'] = $tinymce_buttons_url;
+	$plugins['collapse'] = $tinymce_buttons_url;
+	$plugins['timeline'] = $tinymce_buttons_url;
+	$plugins['github'] = $tinymce_buttons_url;
+	$plugins['video'] = $tinymce_buttons_url;
+	$plugins['hiddentext'] = $tinymce_buttons_url;
 	return $plugins;
 }
 //主题选项页面
@@ -3176,12 +3336,13 @@ function argon_get_search_post_type_array(){
 	$search_filters_type = get_option("argon_search_filters_type", "*post,*page,shuoshuo");
 	$search_filters_type = explode(',', $search_filters_type);
 	if (!isset($_GET['post_type'])) {
-		$default = array_filter($search_filters_type, function ($str) {	return $str[0] == '*'; });
+		$default = array_filter($search_filters_type, function ($str) {	return $str !== '' && $str[0] == '*'; });
 		$default = array_map(function ($str) { return substr($str, 1) ;}, $default);
 		return $default;
 	}
+	$search_filters_type = array_filter($search_filters_type, function ($str) { return $str !== ''; });
 	$search_filters_type = array_map(function ($str) { return $str[0] == '*' ? substr($str, 1) : $str; }, $search_filters_type);
-	$post_type = explode(',', $_GET['post_type']);
+	$post_type = explode(',', sanitize_text_field(wp_unslash($_GET['post_type'])));
 	$arr = array();
 	foreach ($search_filters_type as $type) {
 		if (in_array($type, $post_type)) {
@@ -3246,8 +3407,8 @@ add_filter('manage_pages_columns', 'argon_add_views_column');
 // 显示浏览量列的内容
 function argon_display_views_column($column_name, $post_id) {
 	if ($column_name == 'post_views') {
-		$views = get_post_meta($post_id, 'views', true);
-		echo ($views === '' ? '0' : number_format_i18n($views));
+		$views = argon_normalize_views_count(get_post_meta($post_id, 'views', true));
+		echo '<span class="argon-post-views-value" data-views="' . esc_attr($views) . '">' . number_format_i18n($views) . '</span>';
 	}
 }
 add_action('manage_posts_custom_column', 'argon_display_views_column', 10, 2);
@@ -3285,7 +3446,7 @@ function argon_quick_edit_views_js() {
 				$wpInlineEdit.apply(this, arguments);
 				var postId = (typeof id === 'object') ? this.getId(id) : id;
 				if (postId) {
-					var viewsValue = $('#post-' + postId + ' td.column-post_views').text().replace(/,/g, '');
+					var viewsValue = $('#post-' + postId + ' td.column-post_views .argon-post-views-value').data('views');
 					$('#edit-' + postId + ' input[name="post_views"]').val(viewsValue);
 				}
 			};
@@ -3298,14 +3459,20 @@ add_action('admin_footer', 'argon_quick_edit_views_js');
 
 // 保存 Quick Edit 提交的浏览量
 function argon_save_quick_edit_views($post_id) {
-	if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+	if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+		return;
+	}
+	if (!isset($_POST['_inline_edit']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_inline_edit'])), 'inlineeditnonce')) {
 		return;
 	}
 	if (!current_user_can('edit_post', $post_id)) {
 		return;
 	}
+	if (!in_array(get_post_type($post_id), array('post', 'page'), true)) {
+		return;
+	}
 	if (isset($_POST['post_views']) && $_POST['post_views'] !== '') {
-		$views = absint($_POST['post_views']);
+		$views = argon_normalize_views_count(wp_unslash($_POST['post_views']));
 		update_post_meta($post_id, 'views', $views);
 	}
 }
