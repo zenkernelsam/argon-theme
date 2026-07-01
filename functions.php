@@ -1098,19 +1098,6 @@ function argon_comment_format($comment, $args, $depth){
 					?>
 					<?php
 
-// [Argon] 性能计时起点
-$GLOBALS['argon_perf_start'] = microtime(true);
-
-// [Argon] PHP 版本检查
-if (version_compare(PHP_VERSION, '8.0.0', '<')) {
-	wp_die('Argon 主题要求 PHP 8.0 或更高版本，当前版本: ' . PHP_VERSION);
-}
-
-// ========== Argon 优化特性 ==========
-// Debug 兼容模式：开启后禁用所有优化特性，回退到原版行为
-function argon_next_is_debug_mode() {
-	return get_option('argon_next_debug_mode', 'false') === 'true';
-}
 						echo parse_ua_and_icon($comment -> comment_agent);
 					?>
 				</div>
